@@ -1,0 +1,6 @@
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/main.c:88:5:main	8	static,ignoring_inline_asm
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/main.c:178:6:Task3600s_Callback	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/main.c:183:6:HAL_TIM_PeriodElapsedCallback	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/main.c:199:6:SystemClock_Config	120	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/main.c:260:6:PeriphCommonClock_Config	192	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/main.c:282:6:Error_Handler	4	static,ignoring_inline_asm

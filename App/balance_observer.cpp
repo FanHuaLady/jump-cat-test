@@ -17,6 +17,11 @@
 
 namespace
 {
+    static inline float BalanceApplyJointMount(float continuous, float sign, float offset)
+    {
+        return sign * continuous + offset;
+    }
+
     static inline float BalanceWrapPi(float angle)
     {
         while (angle > M_PI)  angle -= 2.0f * M_PI;
@@ -195,8 +200,12 @@ void BalanceObserver_UpdateLeg(BalanceRobot* robot)
             BalanceAngleUnwrapUpdate(&robot->joint_angle_unwrap[BAL_JOINT_L_1], joint1_raw);
 
         // 第一版：先不加零位偏置和方向修正
-        leg.joint.phi1  = joint0_cont;
-        leg.joint.phi4  = joint1_cont;
+        leg.joint.phi1  = BalanceApplyJointMount(joint0_cont,
+                                                 BALANCE_JOINT_L0_SIGN,
+                                                 BALANCE_JOINT_L0_OFFSET);
+        leg.joint.phi4  = BalanceApplyJointMount(joint1_cont,
+                                                 BALANCE_JOINT_L1_SIGN,
+                                                 BALANCE_JOINT_L1_OFFSET);
 
         leg.joint.dphi1 = robot->joint_motor_fdb[BAL_JOINT_L_0].vel;
         leg.joint.dphi4 = robot->joint_motor_fdb[BAL_JOINT_L_1].vel;
@@ -238,8 +247,12 @@ void BalanceObserver_UpdateLeg(BalanceRobot* robot)
             BalanceAngleUnwrapUpdate(&robot->joint_angle_unwrap[BAL_JOINT_R_1], joint1_raw);
 
         // 第一版：先不加零位偏置和方向修正
-        leg.joint.phi1  = joint0_cont;
-        leg.joint.phi4  = joint1_cont;
+        leg.joint.phi1  = BalanceApplyJointMount(joint0_cont,
+                                                 BALANCE_JOINT_R0_SIGN,
+                                                 BALANCE_JOINT_R0_OFFSET);
+        leg.joint.phi4  = BalanceApplyJointMount(joint1_cont,
+                                                 BALANCE_JOINT_R1_SIGN,
+                                                 BALANCE_JOINT_R1_OFFSET);
 
         leg.joint.dphi1 = robot->joint_motor_fdb[BAL_JOINT_R_0].vel;
         leg.joint.dphi4 = robot->joint_motor_fdb[BAL_JOINT_R_1].vel;

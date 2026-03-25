@@ -44,7 +44,7 @@ bool init_finished = false;
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "balance_app.h"
+#include "balance_leg_debug.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -153,7 +153,7 @@ int main(void)
   
   WS2812_Task_Create();
   // Control_Task_Create();
-  BalanceApp_Task_Create();
+  BalanceLegDebug_Task_Create();
   SysTimestamp_Init(&htim5);                                      // 初始化时间戳
   HAL_TIM_Base_Start_IT(&htim5);
     

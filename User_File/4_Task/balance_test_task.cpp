@@ -51,7 +51,7 @@ static inline float Balance_Test_Clamp(float x, float min_v, float max_v)
     return x;
 }
 
-void CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
+static void Balance_Test_CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
 {
     switch (Header.Identifier)
     {
@@ -95,7 +95,7 @@ void Balance_Test_Motor_Init(void)
     // 或者如果你们的类是配置结构体初始化，也在这里填进去。
     // ==========================================================
     
-    CAN_Init(&hfdcan1, CAN1_Callback);                              // 电机的CAN
+    CAN_Init(&hfdcan1, Balance_Test_CAN1_Callback);                // 电机的CAN
     
     motor_test_dm.Init(&hfdcan1, 0x00, 0x01, Motor_DM_Control_Method_NORMAL_MIT, 12.5f, 25.0f, 10.0f, 10.261194f);
     

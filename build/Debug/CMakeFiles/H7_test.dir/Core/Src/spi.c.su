@@ -1,0 +1,4 @@
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/spi.c:33:6:MX_SPI2_Init	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/spi.c:75:6:MX_SPI6_Init	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/spi.c:117:6:HAL_SPI_MspInit	248	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/Core/Src/spi.c:260:6:HAL_SPI_MspDeInit	16	static

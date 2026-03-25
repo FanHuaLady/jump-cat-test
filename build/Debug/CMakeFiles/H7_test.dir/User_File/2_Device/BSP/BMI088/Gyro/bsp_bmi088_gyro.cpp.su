@@ -1,0 +1,8 @@
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/BSP/BMI088/Gyro/bsp_bmi088_gyro.cpp:31:6:void Class_BMI088_Gyro::Init()	64	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/BSP/BMI088/Gyro/bsp_bmi088_gyro.cpp:88:6:void Class_BMI088_Gyro::SPI_RxCallback()	56	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/BSP/BMI088/Gyro/bsp_bmi088_gyro.cpp:118:6:void Class_BMI088_Gyro::SPI_Request_Gyro()	24	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/BSP/BMI088/Gyro/bsp_bmi088_gyro.cpp:129:6:void Class_BMI088_Gyro::Read_Single_Register(const uint8_t&) const	32	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/BSP/BMI088/Gyro/bsp_bmi088_gyro.cpp:141:6:void Class_BMI088_Gyro::Read_Multi_Register(const uint8_t&, const uint32_t&) const	40	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/BSP/BMI088/Gyro/bsp_bmi088_gyro.cpp:154:6:void Class_BMI088_Gyro::Write_Single_Register(const uint8_t&, const uint8_t*) const	40	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/BSP/BMI088/Gyro/bsp_bmi088_gyro.cpp:169:6:void Class_BMI088_Gyro::Write_Multi_Register(const uint8_t&, const uint8_t*, const uint32_t&) const	40	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/1_Middleware/Algorithm/Matrix/alg_matrix.h:82:19:float* Class_Matrix_f32<row, column>::operator[](const int&) [with int row = 3; int column = 1]	16	static

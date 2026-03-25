@@ -1,0 +1,6 @@
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/USB_DEVICE/App/usbd_cdc_if.cpp:157:15:int8_t CDC_Init_HS()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/USB_DEVICE/App/usbd_cdc_if.cpp:172:15:int8_t CDC_DeInit_HS()	4	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/USB_DEVICE/App/usbd_cdc_if.cpp:186:15:int8_t CDC_Control_HS(uint8_t, uint8_t*, uint16_t)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/USB_DEVICE/App/usbd_cdc_if.cpp:267:15:int8_t CDC_Receive_HS(uint8_t*, uint32_t*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/USB_DEVICE/App/usbd_cdc_if.cpp:284:9:uint8_t CDC_Transmit_HS(uint8_t*, uint16_t)	24	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/USB_DEVICE/App/usbd_cdc_if.cpp:310:15:int8_t CDC_TransmitCplt_HS(uint8_t*, uint32_t*, uint8_t)	32	static
