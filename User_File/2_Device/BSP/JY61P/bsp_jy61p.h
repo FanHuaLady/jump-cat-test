@@ -19,7 +19,7 @@
 
 /* Exported types ------------------------------------------------------------*/
 
-// ==================== 新加入的包类型枚举 ====================
+// ==================== 包类型枚举 ====================
 enum PacketType {
     PACKET_NONE = 0,
     ANGLE_PACKET,   // 0x53 - 角度输出
@@ -27,6 +27,26 @@ enum PacketType {
     GYRO_PACKET,    // 0x52 - 角速度输出
     QUAT_PACKET     // 0x59 - 四元数输出
 };
+
+typedef struct
+{
+    float roll;     // 滚转角（度）
+    float pitch;    // 俯仰角（度）
+    float yaw;      // 偏航角（度）
+    
+    float accel_x;  // X轴加速度（m/s²）
+    float accel_y;  // Y轴加速度（m/s²）
+    float accel_z;  // Z轴加速度（m/s²）
+    
+    float gyro_x;   // X轴角速度（度/秒）
+    float gyro_y;   // Y轴角速度（度/秒）
+    float gyro_z;   // Z轴角速度（度/秒）
+    
+    float quat_q0;  // 四元数分量q0
+    float quat_q1;  // 四元数分量q1
+    float quat_q2;  // 四元数分量q2
+    float quat_q3;  // 四元数分量q3
+} AttitudeData_t;
 
 /**
  * @brief JY61P陀螺仪类
@@ -135,6 +155,12 @@ public:
      */
     float GetQuatQ3() const;
 
+    /**
+     * @brief 批量获取所有姿态数据（线程安全，推荐使用）
+     * 
+     * @param data 输出的姿态数据指针
+     */
+    void GetAttitudeData(AttitudeData_t *data) const;
 
 
 private:
