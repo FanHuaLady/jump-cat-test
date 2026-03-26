@@ -26,7 +26,7 @@
 
 #define BALANCE_DEFAULT_LEG_LEN_MIN   0.100f
 #define BALANCE_DEFAULT_LEG_LEN_MAX   0.320f
-#define BALANCE_DEFAULT_LEG_LEN_STAND 0.100f
+#define BALANCE_DEFAULT_LEG_LEN_STAND 0.300f
 
 #define BALANCE_DEFAULT_ON_LENGTH     0.230f
 #define BALANCE_DEFAULT_CN_LENGTH     0.125f
@@ -38,19 +38,37 @@
 #define BALANCE_DEFAULT_MIN_OP_LEN    1e-5f
 
 // =========================
-// 关节安装修正
-// 连续角只负责解圈，真正用于几何计算的关节角 = sign * continuous + offset
-// offset 单位是 rad
+// 关节安装修正 + 参考姿态标定
+//
+// continuous 只负责解圈。
+// 真正用于几何计算的关节角：
+// phi = sign * (continuous - cont_ref) + phi_ref
+//
+// 其中：
+// cont_ref : 参考姿态下，该电机的连续角读数（单位 rad）
+// phi_ref  : 同一参考姿态下，模型里的关节角（单位 rad）
 // =========================
+
+// ---- 方向修正 ----
 #define BALANCE_JOINT_L0_SIGN         1.0f
 #define BALANCE_JOINT_L1_SIGN         1.0f
 #define BALANCE_JOINT_R0_SIGN         1.0f
 #define BALANCE_JOINT_R1_SIGN         1.0f
 
-#define BALANCE_JOINT_L0_OFFSET       0.2f
-#define BALANCE_JOINT_L1_OFFSET       0.2f
-#define BALANCE_JOINT_R0_OFFSET       0.0f
-#define BALANCE_JOINT_R1_OFFSET       0.0f
+// ---- 参考姿态下的电机连续角读数 a ----
+// 这里先给 0，占位，等你实测后填进去
+#define BALANCE_JOINT_L0_CONT_REF     0.0f
+#define BALANCE_JOINT_L1_CONT_REF     0.0f
+#define BALANCE_JOINT_R0_CONT_REF     0.0f
+#define BALANCE_JOINT_R1_CONT_REF     0.0f
+
+// ---- 参考姿态下的模型角 phi_ref ----
+// 按 O 为原点、x 右、y 上、逆时针为正 的坐标系填写
+// 这里先给 0，占位，等你确定后填进去
+#define BALANCE_JOINT_L0_PHI_REF      -2.35619f
+#define BALANCE_JOINT_L1_PHI_REF      -0.785398f
+#define BALANCE_JOINT_R0_PHI_REF      0.0f
+#define BALANCE_JOINT_R1_PHI_REF      0.0f
 
 // =========================
 // 默认安全限制

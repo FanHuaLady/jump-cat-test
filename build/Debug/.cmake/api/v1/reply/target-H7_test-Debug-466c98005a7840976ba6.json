@@ -683,7 +683,8 @@
 				66,
 				67,
 				68,
-				69
+				69,
+				70
 			]
 		},
 		{
@@ -1075,7 +1076,8 @@
 				66,
 				67,
 				68,
-				69
+				69,
+				70
 			]
 		},
 		{
@@ -1089,7 +1091,6 @@
 			"name" : "Object Libraries",
 			"sourceIndexes" : 
 			[
-				70,
 				71,
 				72,
 				73,
@@ -1134,7 +1135,8 @@
 				112,
 				113,
 				114,
-				115
+				115,
+				116
 			]
 		}
 	],
@@ -1282,6 +1284,12 @@
 			"backtrace" : 7,
 			"compileGroupIndex" : 1,
 			"path" : "App/balance_controller.cpp",
+			"sourceGroupIndex" : 0
+		},
+		{
+			"backtrace" : 7,
+			"compileGroupIndex" : 1,
+			"path" : "App/balance_home_test.cpp",
 			"sourceGroupIndex" : 0
 		},
 		{

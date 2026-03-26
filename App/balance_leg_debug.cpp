@@ -51,7 +51,11 @@ static float g_leg_kp = 100.0f;
 static float g_leg_kd = 6.0f;
 
 // 力方向控制量限幅（先保守）
-static float g_leg_force_limit = 4.0f;
+static float g_leg_force_limit = 40.0f;
+
+// ==============================
+// 自动回参考姿态逻辑
+// ==============================
 
 // ==============================
 // 工具函数
@@ -141,6 +145,10 @@ static int BalanceLegDebug_AppendFloat4(char* buf, size_t buf_size, const char* 
                     fraction_part);
 }
 
+// 达妙单圈范围近似 [-12.5, 12.5]
+
+// 已知当前 unwrap 状态，把 continuous 目标映射到“最近的 raw 目标”
+
 // ==============================
 // 初始化部分
 // ==============================
@@ -158,6 +166,8 @@ static void BalanceLegDebug_InitRobot(void)
 
 static void BalanceLegDebug_CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
 {
+    (void)Buffer;
+
     switch (Header.Identifier)
     {
     case (0x02): // MasterID
@@ -172,24 +182,18 @@ static void BalanceLegDebug_CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t
 static void BalanceLegDebug_InitMotors(void)
 {
     // ==========================================
-    // 你需要在这里补上两个达妙电机的真实初始化
-    //
-    // 示例（仅示意，不一定是你工程真实接口）：
-    //
-    // g_leg_debug_joint_0.Init(...);
-    // g_leg_debug_joint_1.Init(...);
-    //
-    // 注意：
     // 这里只接左腿两个关节电机
     // 不接轮子
     // ==========================================
-    
-    CAN_Init(&hfdcan1, BalanceLegDebug_CAN1_Callback);             // 电机的CAN
-    g_leg_debug_joint_0.Init(&hfdcan1, 0x02, 0x02, Motor_DM_Control_Method_NORMAL_MIT, 12.5f, 25.0f, 10.0f, 10.261194f);
-    g_leg_debug_joint_1.Init(&hfdcan1, 0x03, 0x03, Motor_DM_Control_Method_NORMAL_MIT, 12.5f, 25.0f, 10.0f, 10.261194f);
 
-    
-    
+    CAN_Init(&hfdcan1, BalanceLegDebug_CAN1_Callback);
+    g_leg_debug_joint_0.Init(&hfdcan1, 0x02, 0x02,
+                             Motor_DM_Control_Method_NORMAL_MIT,
+                             12.5f, 25.0f, 10.0f, 10.261194f);
+    g_leg_debug_joint_1.Init(&hfdcan1, 0x03, 0x03,
+                             Motor_DM_Control_Method_NORMAL_MIT,
+                             12.5f, 25.0f, 10.0f, 10.261194f);
+
     BalanceMotorIf_Init();
 
     BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_leg_debug_joint_0);
@@ -219,7 +223,8 @@ void BalanceLegDebug_Enable(void)
         BalanceLegDebug_Init();
     }
 
-    g_leg_debug_enable = true;
+    g_leg_debug_enable = true;                                      // 开启使能
+
     g_leg_target_length = Clamp(BALANCE_DEFAULT_LEG_LEN_STAND,
                                 BALANCE_DEFAULT_LEG_LEN_MIN,
                                 BALANCE_DEFAULT_LEG_LEN_MAX);
@@ -230,6 +235,7 @@ void BalanceLegDebug_Enable(void)
 void BalanceLegDebug_Disable(void)
 {
     g_leg_debug_enable = false;
+
     g_leg_target_length = Clamp(BALANCE_DEFAULT_LEG_LEN_STAND,
                                 BALANCE_DEFAULT_LEG_LEN_MIN,
                                 BALANCE_DEFAULT_LEG_LEN_MAX);
@@ -251,6 +257,12 @@ void BalanceLegDebug_SetGains(float kp, float kd)
     g_leg_kp = kp;
     g_leg_kd = kd;
 }
+
+// ==============================
+// 回参考姿态控制
+// 让 continuous -> CONT_REF
+// 到位后，observer 里的 phi 就会等于 PHI_REF
+// ==============================
 
 // ==============================
 // 单腿腿长控制核心
@@ -307,7 +319,7 @@ static void BalanceLegDebug_RunController(void)
 
 // ==============================
 // 任务 1：控制任务
-// 读反馈 -> observer -> 单腿腿长控制
+// 读反馈 -> observer -> 先回参考姿态 -> 单腿腿长控制
 // ==============================
 static void vBalanceLegDebugCtrlTask(void *pvParameters)
 {
@@ -332,7 +344,7 @@ static void vBalanceLegDebugCtrlTask(void *pvParameters)
         g_leg_debug_robot.body.phi = 0.0f;
         g_leg_debug_robot.body.phi_dot = 0.0f;
 
-        // 3. 只更新腿状态
+        // 3. 更新腿状态
         BalanceObserver_UpdateLeg(&g_leg_debug_robot);
 
         if (g_leg_debug_enable)
@@ -354,6 +366,10 @@ static void vBalanceLegDebugCtrlTask(void *pvParameters)
         volatile float rod_f  = g_leg_debug_robot.cmd[0].rod_f;
         volatile float jt0    = g_leg_debug_robot.cmd[0].joint_t[0];
         volatile float jt1    = g_leg_debug_robot.cmd[0].joint_t[1];
+        volatile float c0     = g_leg_debug_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous;
+        volatile float c1     = g_leg_debug_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous;
+        volatile float e0     = c0 - BALANCE_JOINT_L0_CONT_REF;
+        volatile float e1     = c1 - BALANCE_JOINT_L1_CONT_REF;
 
         (void)phi1;
         (void)phi4;
@@ -364,6 +380,10 @@ static void vBalanceLegDebugCtrlTask(void *pvParameters)
         (void)rod_f;
         (void)jt0;
         (void)jt1;
+        (void)c0;
+        (void)c1;
+        (void)e0;
+        (void)e1;
 
         vTaskDelay(pdMS_TO_TICKS(2));
     }
@@ -405,7 +425,7 @@ static void vBalanceLegDebugAliveTask(void *pvParameters)
 }
 
 // ==============================
-// 浠诲姟 4锛氫覆鍙?7 鎵撳嵃铏氭嫙鏉嗛暱
+// 任务 4：串口7打印调试信息
 // ==============================
 static void vBalanceLegDebugPrintTask(void *pvParameters)
 {
@@ -413,7 +433,7 @@ static void vBalanceLegDebugPrintTask(void *pvParameters)
 
     vTaskDelay(pdMS_TO_TICKS(1200));
 
-    char tx_buf[160] = {0};
+    char tx_buf[180] = {0};
 
     for (;;)
     {
@@ -427,11 +447,7 @@ static void vBalanceLegDebugPrintTask(void *pvParameters)
         }
 
         written = snprintf(tx_buf, sizeof(tx_buf), "");
-        size_t used = 0U;
-        if (written >= 0)
-        {
-            used = static_cast<size_t>(written);
-        }
+        size_t used = (written >= 0) ? static_cast<size_t>(written) : 0U;
         if (used < sizeof(tx_buf))
         {
             written = BalanceLegDebug_AppendFloat4(tx_buf + used, sizeof(tx_buf) - used, "phi1", leg.joint.phi1);
@@ -445,6 +461,60 @@ static void vBalanceLegDebugPrintTask(void *pvParameters)
         if (used < sizeof(tx_buf))
         {
             written = BalanceLegDebug_AppendFloat4(tx_buf + used, sizeof(tx_buf) - used, "phi4", leg.joint.phi4);
+            if (written > 0) used += static_cast<size_t>(written);
+        }
+        if (used < sizeof(tx_buf))
+        {
+            snprintf(tx_buf + used, sizeof(tx_buf) - used, "\r\n");
+            BalanceLegDebug_PrintUart7(tx_buf);
+        }
+
+        written = snprintf(tx_buf, sizeof(tx_buf), "");
+        used = (written >= 0) ? static_cast<size_t>(written) : 0U;
+        if (used < sizeof(tx_buf))
+        {
+            written = BalanceLegDebug_AppendFloat4(tx_buf + used, sizeof(tx_buf) - used,
+                                                   "c0", g_leg_debug_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous);
+            if (written > 0) used += static_cast<size_t>(written);
+        }
+        if (used < sizeof(tx_buf))
+        {
+            written = snprintf(tx_buf + used, sizeof(tx_buf) - used, ", ");
+            if (written > 0) used += static_cast<size_t>(written);
+        }
+        if (used < sizeof(tx_buf))
+        {
+            written = BalanceLegDebug_AppendFloat4(tx_buf + used, sizeof(tx_buf) - used,
+                                                   "c1", g_leg_debug_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous);
+            if (written > 0) used += static_cast<size_t>(written);
+        }
+        if (used < sizeof(tx_buf))
+        {
+            snprintf(tx_buf + used, sizeof(tx_buf) - used, "\r\n");
+            BalanceLegDebug_PrintUart7(tx_buf);
+        }
+
+        written = snprintf(tx_buf, sizeof(tx_buf), "");
+        used = (written >= 0) ? static_cast<size_t>(written) : 0U;
+        if (used < sizeof(tx_buf))
+        {
+            written = BalanceLegDebug_AppendFloat4(tx_buf + used, sizeof(tx_buf) - used,
+                                                   "e0",
+                                                   g_leg_debug_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous -
+                                                   BALANCE_JOINT_L0_CONT_REF);
+            if (written > 0) used += static_cast<size_t>(written);
+        }
+        if (used < sizeof(tx_buf))
+        {
+            written = snprintf(tx_buf + used, sizeof(tx_buf) - used, ", ");
+            if (written > 0) used += static_cast<size_t>(written);
+        }
+        if (used < sizeof(tx_buf))
+        {
+            written = BalanceLegDebug_AppendFloat4(tx_buf + used, sizeof(tx_buf) - used,
+                                                   "e1",
+                                                   g_leg_debug_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous -
+                                                   BALANCE_JOINT_L1_CONT_REF);
             if (written > 0) used += static_cast<size_t>(written);
         }
         if (used < sizeof(tx_buf))

@@ -35,7 +35,6 @@ extern "C"
   /* Exported types ------------------------------------------------------------*/
   /* USER CODE BEGIN ET */
 #include "ws2812_task.h"
-#include "balance_test_task.h"
 // #include "control_task.h"
   /* USER CODE END ET */
 

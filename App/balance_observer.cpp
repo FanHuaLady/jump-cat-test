@@ -17,9 +17,14 @@
 
 namespace
 {
-    static inline float BalanceApplyJointMount(float continuous, float sign, float offset)
+    // 参考姿态标定后的关节角映射：
+    // phi = sign * (continuous - cont_ref) + phi_ref
+    static inline float BalanceApplyJointMount(float continuous,
+                                               float sign,
+                                               float cont_ref,
+                                               float phi_ref)
     {
-        return sign * continuous + offset;
+        return sign * (continuous - cont_ref) + phi_ref;
     }
 
     static inline float BalanceWrapPi(float angle)
@@ -45,7 +50,7 @@ namespace
 
         memset(leg, 0, sizeof(BalanceLegState));
     }
-    
+
     static inline void BalanceAngleUnwrapReset(BalanceAngleUnwrap* unwrap)
     {
         if (unwrap == nullptr)
@@ -111,12 +116,12 @@ void BalanceObserver_Init(BalanceRobot* robot)
     robot->body.x_acc = 0.0f;
     robot->body.x_dot_obv = 0.0f;
     robot->body.x_acc_obv = 0.0f;
-    
+
     for (int i = 0; i < BALANCE_JOINT_NUM; ++i)
     {
         BalanceAngleUnwrapReset(&robot->joint_angle_unwrap[i]);
     }
-    
+
     for (int i = 0; i < BALANCE_LEG_NUM; ++i)
     {
         BalanceClearLeg(&robot->leg[i]);
@@ -129,63 +134,37 @@ void BalanceObserver_Init(BalanceRobot* robot)
     robot->ref.target_roll = 0.0f;
 }
 
-// 这里是补全LQR的一部分 QQQ!!!
-// 从IMU 读取机身姿态和角速度，构造 body 状态
+// 从 IMU 读取机身姿态和角速度，构造 body 状态
 void BalanceObserver_UpdateBody(BalanceRobot* robot)
 {
     if (robot == nullptr)
     {
         return;
     }
-    
-    // 这里的陀螺仪数据来源是balance_imu_if.cpp
-    // 还有一个陀螺仪任务，所以可以在这里直接用
-    
-    // 直接从统一IMU结构取数据
-    robot->body.roll = robot->imu.roll;                         // 身体的 roll 就等于IMU的 roll
-    robot->body.pitch = robot->imu.pitch;                       // 身体的 pitch 就等于IMU的 pitch
-    robot->body.yaw = robot->imu.yaw;                           // 身体的 yaw 就等于IMU的 yaw
 
-    robot->body.roll_dot = robot->imu.roll_dot;                 // 身体的 roll_dot 就等于IMU的 roll_dot
-    robot->body.pitch_dot = robot->imu.pitch_dot;               // 身体的 pitch_dot 就等于IMU的 pitch_dot
-    robot->body.yaw_dot = robot->imu.yaw_dot;                   // 身体的 yaw_dot 就等于IMU的 yaw_dot
+    // 直接从统一 IMU 结构取数据
+    robot->body.roll = robot->imu.roll;
+    robot->body.pitch = robot->imu.pitch;
+    robot->body.yaw = robot->imu.yaw;
 
-    // 按原平衡步兵语义：
-    // phi = -pitch
-    // phi_dot = -pitch_dot
-    // 为什么取负，是原模型的坐标定义问题【思考】
-    // 经过这个函数
-    // LQR算法就补上了phi和pitch
-    robot->body.phi = -robot->body.pitch;                       // LQR 最终使用的俯仰角变量叫 phi
-    robot->body.phi_dot = -robot->body.pitch_dot;               // LQR 最终使用的俯仰角速度变量叫 pitch_dot
+    robot->body.roll_dot = robot->imu.roll_dot;
+    robot->body.pitch_dot = robot->imu.pitch_dot;
+    robot->body.yaw_dot = robot->imu.yaw_dot;
 
-    // 先简单把 body x_acc 直接取 IMU 前向加速度
-    // 后面如果需要，可以补去重力和坐标变换
+    // 平衡主平面暂用 pitch
+    robot->body.phi = BalanceWrapPi(robot->body.pitch);
+    robot->body.phi_dot = robot->body.pitch_dot;
+
+    // 线加速度简单取 IMU x 方向
     robot->body.x_acc = robot->imu.ax;
 }
 
-// 这里是补全LQR的一部分 QQQ!!!
-// 它把两个关节角变成虚拟腿状态
 void BalanceObserver_UpdateLeg(BalanceRobot* robot)
 {
     if (robot == nullptr)
     {
         return;
     }
-
-    // =========================
-    // 第一版约定：
-    // 左腿关节: 0,1
-    // 右腿关节: 2,3
-    // 左轮: 0
-    // 右轮: 1
-    //
-    // 这里先不做：
-    // - 零位偏置
-    // - 方向翻转
-    // - 特殊安装修正
-    // 后面再加
-    // =========================
 
     // ----- 左腿 -----
     {
@@ -199,18 +178,21 @@ void BalanceObserver_UpdateLeg(BalanceRobot* robot)
         const float joint1_cont =
             BalanceAngleUnwrapUpdate(&robot->joint_angle_unwrap[BAL_JOINT_L_1], joint1_raw);
 
-        // 第一版：先不加零位偏置和方向修正
-        leg.joint.phi1  = BalanceApplyJointMount(joint0_cont,
-                                                 BALANCE_JOINT_L0_SIGN,
-                                                 BALANCE_JOINT_L0_OFFSET);
-        leg.joint.phi4  = BalanceApplyJointMount(joint1_cont,
-                                                 BALANCE_JOINT_L1_SIGN,
-                                                 BALANCE_JOINT_L1_OFFSET);
+        // 参考姿态映射
+        leg.joint.phi1 = BalanceApplyJointMount(joint0_cont,
+                                                BALANCE_JOINT_L0_SIGN,
+                                                BALANCE_JOINT_L0_CONT_REF,
+                                                BALANCE_JOINT_L0_PHI_REF);
+        leg.joint.phi4 = BalanceApplyJointMount(joint1_cont,
+                                                BALANCE_JOINT_L1_SIGN,
+                                                BALANCE_JOINT_L1_CONT_REF,
+                                                BALANCE_JOINT_L1_PHI_REF);
 
-        leg.joint.dphi1 = robot->joint_motor_fdb[BAL_JOINT_L_0].vel;
-        leg.joint.dphi4 = robot->joint_motor_fdb[BAL_JOINT_L_1].vel;
-        leg.joint.t1    = robot->joint_motor_fdb[BAL_JOINT_L_0].tor;
-        leg.joint.t2    = robot->joint_motor_fdb[BAL_JOINT_L_1].tor;
+        // 速度、力矩也统一到同一个关节坐标系
+        leg.joint.dphi1 = BALANCE_JOINT_L0_SIGN * robot->joint_motor_fdb[BAL_JOINT_L_0].vel;
+        leg.joint.dphi4 = BALANCE_JOINT_L1_SIGN * robot->joint_motor_fdb[BAL_JOINT_L_1].vel;
+        leg.joint.t1    = BALANCE_JOINT_L0_SIGN * robot->joint_motor_fdb[BAL_JOINT_L_0].tor;
+        leg.joint.t2    = BALANCE_JOINT_L1_SIGN * robot->joint_motor_fdb[BAL_JOINT_L_1].tor;
 
         leg.wheel_vel = robot->wheel_motor_fdb[BAL_WHEEL_L].vel;
 
@@ -231,7 +213,13 @@ void BalanceObserver_UpdateLeg(BalanceRobot* robot)
         leg.rod.dphi0 = d_l0_d_phi0[1];
         leg.rod.dtheta = -leg.rod.dphi0 - robot->body.phi_dot;
 
+        // 第一版先固定不做离地判定
         leg.is_take_off = false;
+
+        // 腿长限制
+        leg.rod.l0 = BalanceClamp(leg.rod.l0,
+                                  BALANCE_DEFAULT_LEG_LEN_MIN,
+                                  BALANCE_DEFAULT_LEG_LEN_MAX);
     }
 
     // ----- 右腿 -----
@@ -246,18 +234,21 @@ void BalanceObserver_UpdateLeg(BalanceRobot* robot)
         const float joint1_cont =
             BalanceAngleUnwrapUpdate(&robot->joint_angle_unwrap[BAL_JOINT_R_1], joint1_raw);
 
-        // 第一版：先不加零位偏置和方向修正
-        leg.joint.phi1  = BalanceApplyJointMount(joint0_cont,
-                                                 BALANCE_JOINT_R0_SIGN,
-                                                 BALANCE_JOINT_R0_OFFSET);
-        leg.joint.phi4  = BalanceApplyJointMount(joint1_cont,
-                                                 BALANCE_JOINT_R1_SIGN,
-                                                 BALANCE_JOINT_R1_OFFSET);
+        // 参考姿态映射
+        leg.joint.phi1 = BalanceApplyJointMount(joint0_cont,
+                                                BALANCE_JOINT_R0_SIGN,
+                                                BALANCE_JOINT_R0_CONT_REF,
+                                                BALANCE_JOINT_R0_PHI_REF);
+        leg.joint.phi4 = BalanceApplyJointMount(joint1_cont,
+                                                BALANCE_JOINT_R1_SIGN,
+                                                BALANCE_JOINT_R1_CONT_REF,
+                                                BALANCE_JOINT_R1_PHI_REF);
 
-        leg.joint.dphi1 = robot->joint_motor_fdb[BAL_JOINT_R_0].vel;
-        leg.joint.dphi4 = robot->joint_motor_fdb[BAL_JOINT_R_1].vel;
-        leg.joint.t1    = robot->joint_motor_fdb[BAL_JOINT_R_0].tor;
-        leg.joint.t2    = robot->joint_motor_fdb[BAL_JOINT_R_1].tor;
+        // 速度、力矩也统一到同一个关节坐标系
+        leg.joint.dphi1 = BALANCE_JOINT_R0_SIGN * robot->joint_motor_fdb[BAL_JOINT_R_0].vel;
+        leg.joint.dphi4 = BALANCE_JOINT_R1_SIGN * robot->joint_motor_fdb[BAL_JOINT_R_1].vel;
+        leg.joint.t1    = BALANCE_JOINT_R0_SIGN * robot->joint_motor_fdb[BAL_JOINT_R_0].tor;
+        leg.joint.t2    = BALANCE_JOINT_R1_SIGN * robot->joint_motor_fdb[BAL_JOINT_R_1].tor;
 
         leg.wheel_vel = robot->wheel_motor_fdb[BAL_WHEEL_R].vel;
 
@@ -278,11 +269,18 @@ void BalanceObserver_UpdateLeg(BalanceRobot* robot)
         leg.rod.dphi0 = d_l0_d_phi0[1];
         leg.rod.dtheta = -leg.rod.dphi0 - robot->body.phi_dot;
 
+        // 第一版先固定不做离地判定
         leg.is_take_off = false;
+
+        // 腿长限制
+        leg.rod.l0 = BalanceClamp(leg.rod.l0,
+                                  BALANCE_DEFAULT_LEG_LEN_MIN,
+                                  BALANCE_DEFAULT_LEG_LEN_MAX);
     }
 }
 
-// 这里是补全LQR的一部分 QQQ!!!
+// 简化版速度观测：
+// 左右轮角速度平均 * 轮半径 = 前向线速度
 void BalanceObserver_UpdateVelocity(BalanceRobot* robot)
 {
     if (robot == nullptr)
@@ -290,21 +288,18 @@ void BalanceObserver_UpdateVelocity(BalanceRobot* robot)
         return;
     }
 
-    // 简化版速度观测：
-    // 左右轮角速度平均 * 轮半径 = 前向线速度
     const float speed =
         BALANCE_DEFAULT_WHEEL_RADIUS *
         (robot->leg[0].wheel_vel + robot->leg[1].wheel_vel) * 0.5f;
 
     robot->body.x_dot_obv = speed;
     robot->body.x_acc_obv = robot->body.x_acc;
-    robot->body.x_dot = robot->body.x_dot_obv;                      // 补齐LQR
+    robot->body.x_dot = robot->body.x_dot_obv;
 
     // 第一版直接积分出 x
-    robot->body.x += robot->body.x_dot_obv * robot->dt;             // 补齐LQR
+    robot->body.x += robot->body.x_dot_obv * robot->dt;
 }
 
-// LQR最终的整合
 void BalanceObserver_UpdateLqrState(BalanceRobot* robot)
 {
     if (robot == nullptr)

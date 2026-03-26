@@ -7,6 +7,7 @@ file(GLOB_RECURSE NEW_GLOB LIST_DIRECTORIES false "E:/04_resource/03_DM02_MOTOR_
 set(OLD_GLOB
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp"
+  "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_home_test.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_imu_if.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_kinematics.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_leg_debug.cpp"
@@ -26,6 +27,7 @@ set(OLD_GLOB
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_config.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.h"
+  "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_home_test.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_imu_if.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_kinematics.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_leg_debug.h"
