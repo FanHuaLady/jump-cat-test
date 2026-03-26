@@ -151,13 +151,15 @@ int main(void)
   /* Call init function for freertos objects (in cmsis_os2.c) */
   // MX_FREERTOS_Init();
   
-  
+  SysTimestamp_Init(&htim5);                                      // 初始化时间戳
+  HAL_TIM_Base_Start_IT(&htim5);
   WS2812_Task_Create();
   // Control_Task_Create();
   // BalanceApp_Task_Create();
   JY61P_Task_Create();
-  SysTimestamp_Init(&htim5);                                      // 初始化时间戳
-  HAL_TIM_Base_Start_IT(&htim5);
+  Vofa_Task_Create();
+ 
+
     
   init_finished = true;
   /* Start scheduler */
