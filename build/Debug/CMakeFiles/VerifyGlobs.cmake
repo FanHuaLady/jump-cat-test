@@ -13,7 +13,7 @@ set(OLD_GLOB
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_leg_debug.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_motor_if.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp"
-  "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_task.cpp"
+  "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_tool.cpp"
   )
 if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
   message("-- GLOB mismatch!")
@@ -33,6 +33,7 @@ set(OLD_GLOB
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_leg_debug.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_motor_if.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.h"
+  "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_tool.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_types.h"
   )
 if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
@@ -91,6 +92,7 @@ set(OLD_GLOB
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/Powermeter/dvc_powermeter.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/balance_test_task.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/control_task.cpp"
+  "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/jy61p_task.cpp"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/ws2812_task.cpp"
   )
 if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")
@@ -141,6 +143,7 @@ set(OLD_GLOB
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/Powermeter/dvc_powermeter.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/balance_test_task.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/control_task.h"
+  "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/jy61p_task.h"
   "E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/4_Task/ws2812_task.h"
   )
 if(NOT "${NEW_GLOB}" STREQUAL "${OLD_GLOB}")

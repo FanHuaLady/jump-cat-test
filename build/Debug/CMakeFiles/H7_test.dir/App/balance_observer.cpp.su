@@ -5,8 +5,8 @@ E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:
 E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:54:24:void {anonymous}::BalanceAngleUnwrapReset(BalanceAngleUnwrap*)	16	static
 E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:66:25:float {anonymous}::BalanceAngleUnwrapUpdate(BalanceAngleUnwrap*, float)	32	static
 E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:103:6:void BalanceObserver_Init(BalanceRobot*)	24	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:138:6:void BalanceObserver_UpdateBody(BalanceRobot*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:162:6:void BalanceObserver_UpdateLeg(BalanceRobot*)	120	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:284:6:void BalanceObserver_UpdateVelocity(BalanceRobot*)	24	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:303:6:void BalanceObserver_UpdateLqrState(BalanceRobot*)	24	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:321:6:void BalanceObserver_UpdateAll(BalanceRobot*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:139:6:void BalanceObserver_UpdateBody(BalanceRobot*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:165:6:void BalanceObserver_UpdateLeg(BalanceRobot*)	120	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:287:6:void BalanceObserver_UpdateVelocity(BalanceRobot*)	24	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:306:6:void BalanceObserver_UpdateLqrState(BalanceRobot*)	24	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_observer.cpp:324:6:void BalanceObserver_UpdateAll(BalanceRobot*)	16	static

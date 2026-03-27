@@ -11,6 +11,9 @@ void BalanceController_SetRef(BalanceRobot* robot);
 // 腿长控制（第一版只做腿长P/PD）
 void BalanceController_LegLength(BalanceRobot* robot);
 
+// 角度控制
+void BalanceController_LegAngle(BalanceRobot* robot);
+
 // 输出分配（rod_f + rod_tp -> joint_t -> motor_cmd）
 void BalanceController_Output(BalanceRobot* robot);
 

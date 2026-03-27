@@ -9,12 +9,25 @@
 namespace
 {
     // =========================
-    // 第一版腿长控制参数
-    // 先用很保守的 P / D
-    // 后面再慢慢调
+    // 腿长控制参数
     // =========================
     static constexpr float k_leg_len_kp = 120.0f;
     static constexpr float k_leg_len_kd = 8.0f;
+
+    // =========================
+    // 虚拟杆角度控制参数
+    // 先保守一点，后面慢慢调
+    // =========================
+    static constexpr float k_leg_ang_kp = 35.0f;
+    static constexpr float k_leg_ang_kd = 2.5f;
+
+    // =========================
+    // 当前第一版目标虚拟杆角度
+    // 先固定为 0
+    // 后面你可以改成：
+    // phi0_ref = k_pitch * (pitch_ref - pitch_now)
+    // =========================
+    static constexpr float k_leg_ang_ref = 0.0f;
 
     static inline float BalanceClamp(float x, float min_v, float max_v)
     {
@@ -105,39 +118,64 @@ void BalanceController_LegLength(BalanceRobot* robot)
     }
 
     // =========================
-    // 第一版只做腿长方向力 rod_f
-    // 不做摆角力矩 rod_tp
-    // 不做轮子力矩 wheel_t
+    // 腿长方向控制：输出 rod_f
+    // 这里只改 rod_f，不动 rod_tp
     // =========================
     for (int i = 0; i < BALANCE_LEG_NUM; ++i)
     {
-        const float l_ref = robot->ref.target_leg_length[i];        // 目标腿长
-        const float l_now = robot->leg[i].rod.l0;                   // 当前虚拟腿长
-        const float dl_now = robot->leg[i].rod.dl0;                 // 虚拟腿长变化率
+        const float l_ref  = robot->ref.target_leg_length[i];  // 目标腿长
+        const float l_now  = robot->leg[i].rod.l0;             // 当前虚拟腿长
+        const float dl_now = robot->leg[i].rod.dl0;            // 当前虚拟腿长变化率
 
         const float err_l = l_ref - l_now;
 
-        // 简单 PD
-        // 腿短了，就给正的撑腿力
-        // 腿长了，就给负的收腿力
-        // 腿正在快速伸缩时，用 dl0 做一点阻尼
-        
-        // 这个rod_f是虚拟腿长方向力，是一个PID的输出值
-        // 之后还需要VMC转换为实际的控制力矩
+        // 腿长 PD
         float rod_f = k_leg_len_kp * err_l - k_leg_len_kd * dl_now;
 
-        // 做一个保守限幅，避免一开始太猛
-        rod_f = BalanceClamp(rod_f, -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT, BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
+        // 保守限幅
+        rod_f = BalanceClamp(rod_f,
+                             -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
+                              BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
 
         robot->cmd[i].rod_f = rod_f;
-        robot->cmd[i].rod_tp = 0.0f;
+    }
+}
+
+void BalanceController_LegAngle(BalanceRobot* robot)
+{
+    if (robot == nullptr)
+    {
+        return;
+    }
+
+    // =========================
+    // 虚拟杆摆角控制：输出 rod_tp
+    // 当前先固定目标角为 0
+    // =========================
+    for (int i = 0; i < BALANCE_LEG_NUM; ++i)
+    {
+        const float phi0_now  = robot->leg[i].rod.phi0;    // 当前虚拟杆角度
+        const float dphi0_now = robot->leg[i].rod.dphi0;   // 当前虚拟杆角速度
+
+        const float phi0_ref = k_leg_ang_ref;
+        const float err_phi0 = phi0_ref - phi0_now;
+
+        // 虚拟杆角度 PD
+        float rod_tp = k_leg_ang_kp * err_phi0 - k_leg_ang_kd * dphi0_now;
+
+        // 保守限幅
+        rod_tp = BalanceClamp(rod_tp,
+                              -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
+                               BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
+
+        robot->cmd[i].rod_tp = rod_tp;
         robot->cmd[i].wheel_t = 0.0f;
     }
 }
 
-// 这个函数会利用rod_f, rod_tp和VMC得到真正的控制力矩
-// 然后填充joint_motor_cmd
-// 会存在一个任务将joint_motor_cmd中的内容发给电机
+// 这个函数会利用 rod_f, rod_tp 和 VMC 得到真正的控制力矩
+// 然后填充 joint_motor_cmd
+// 会存在一个任务将 joint_motor_cmd 中的内容发给电机
 void BalanceController_Output(BalanceRobot* robot)
 {
     if (robot == nullptr)
@@ -162,19 +200,19 @@ void BalanceController_Output(BalanceRobot* robot)
     // =========================
     {
         float J[2][2] = {{0.0f, 0.0f}, {0.0f, 0.0f}};
-        BalanceCalcJacobian(robot->leg[0].joint.phi1, robot->leg[0].joint.phi4, J);     // 计算雅可比矩阵
+        BalanceCalcJacobian(robot->leg[0].joint.phi1, robot->leg[0].joint.phi4, J);
 
-        BalanceCalcVmc(robot->cmd[0].rod_f,                                             // pid输出的虚拟腿轴向力
-                       robot->cmd[0].rod_tp,                                            // 虚拟腿转动力矩
-                       J,                                                               // 雅可比矩阵
-                       robot->cmd[0].joint_t);                                          // 分配给两个关节电机的力矩
+        BalanceCalcVmc(robot->cmd[0].rod_f,
+                       robot->cmd[0].rod_tp,
+                       J,
+                       robot->cmd[0].joint_t);
 
         robot->joint_motor_cmd[BAL_JOINT_L_0].pos = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_L_0].vel = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_L_0].tor =
             BalanceClamp(robot->cmd[0].joint_t[0],
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
-                         BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
+                          BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_L_0].kp = BALANCE_DEFAULT_JOINT_MIT_KP;
         robot->joint_motor_cmd[BAL_JOINT_L_0].kd = BALANCE_DEFAULT_JOINT_MIT_KD;
         robot->joint_motor_cmd[BAL_JOINT_L_0].enable = true;
@@ -184,7 +222,7 @@ void BalanceController_Output(BalanceRobot* robot)
         robot->joint_motor_cmd[BAL_JOINT_L_1].tor =
             BalanceClamp(robot->cmd[0].joint_t[1],
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
-                         BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
+                          BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_L_1].kp = BALANCE_DEFAULT_JOINT_MIT_KP;
         robot->joint_motor_cmd[BAL_JOINT_L_1].kd = BALANCE_DEFAULT_JOINT_MIT_KD;
         robot->joint_motor_cmd[BAL_JOINT_L_1].enable = true;
@@ -207,7 +245,7 @@ void BalanceController_Output(BalanceRobot* robot)
         robot->joint_motor_cmd[BAL_JOINT_R_0].tor =
             BalanceClamp(robot->cmd[1].joint_t[0],
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
-                         BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
+                          BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_R_0].kp = BALANCE_DEFAULT_JOINT_MIT_KP;
         robot->joint_motor_cmd[BAL_JOINT_R_0].kd = BALANCE_DEFAULT_JOINT_MIT_KD;
         robot->joint_motor_cmd[BAL_JOINT_R_0].enable = true;
@@ -217,7 +255,7 @@ void BalanceController_Output(BalanceRobot* robot)
         robot->joint_motor_cmd[BAL_JOINT_R_1].tor =
             BalanceClamp(robot->cmd[1].joint_t[1],
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
-                         BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
+                          BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_R_1].kp = BALANCE_DEFAULT_JOINT_MIT_KP;
         robot->joint_motor_cmd[BAL_JOINT_R_1].kd = BALANCE_DEFAULT_JOINT_MIT_KD;
         robot->joint_motor_cmd[BAL_JOINT_R_1].enable = true;

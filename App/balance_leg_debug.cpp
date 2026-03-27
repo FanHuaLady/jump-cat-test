@@ -47,8 +47,8 @@ static TaskHandle_t xBalanceLegDebugPrintTaskHandle = NULL;
 static bool  g_leg_debug_inited = false;
 static bool  g_leg_debug_enable = false;
 static float g_leg_target_length = BALANCE_DEFAULT_LEG_LEN_STAND;
-static float g_leg_kp = 100.0f;
-static float g_leg_kd = 6.0f;
+static float g_leg_kp = 50.0f;
+static float g_leg_kd = 3.0f;
 
 // 力方向控制量限幅（先保守）
 static float g_leg_force_limit = 40.0f;
