@@ -12,6 +12,9 @@
 /* Includes ------------------------------------------------------------------*/
 
 #include "bsp_jy61p.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
 
 /* Private macros ------------------------------------------------------------*/
 
@@ -67,8 +70,13 @@ void Class_JY61P::Init(UART_HandleTypeDef *huart)
  */
 void Class_JY61P::UART_Callback(uint8_t *Buffer, uint16_t Length)
 {
+    // 中断临界区保护，防止任务打断数据写入
+    UBaseType_t uxSavedInterruptStatus = taskENTER_CRITICAL_FROM_ISR();
+    
     // 调用全局对象的处理函数
     BSP_JY61P.DataProcess(Buffer, Length);
+    
+    taskEXIT_CRITICAL_FROM_ISR(uxSavedInterruptStatus);
 }
 
 /**
@@ -202,6 +210,9 @@ void Class_JY61P::ParseByte(uint8_t data)
     }
 }
 
+
+
+
 /**
  * @brief 获取滚转角
  * 
@@ -209,7 +220,11 @@ void Class_JY61P::ParseByte(uint8_t data)
  */
 float Class_JY61P::GetRoll() const
 {
-    return roll;
+    float value;
+    taskENTER_CRITICAL();
+    value = roll;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -219,7 +234,11 @@ float Class_JY61P::GetRoll() const
  */
 float Class_JY61P::GetPitch() const
 {
-    return pitch;
+    float value;
+    taskENTER_CRITICAL();
+    value = pitch;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -229,7 +248,11 @@ float Class_JY61P::GetPitch() const
  */
 float Class_JY61P::GetYaw() const
 {
-    return yaw;
+    float value;
+    taskENTER_CRITICAL();
+    value = yaw;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -239,7 +262,11 @@ float Class_JY61P::GetYaw() const
  */
 float Class_JY61P::GetAccelX() const
 {
-    return accel_x;
+    float value;
+    taskENTER_CRITICAL();
+    value = accel_x;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -249,7 +276,11 @@ float Class_JY61P::GetAccelX() const
  */
 float Class_JY61P::GetAccelY() const
 {
-    return accel_y;
+    float value;
+    taskENTER_CRITICAL();
+    value = accel_y;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -259,7 +290,11 @@ float Class_JY61P::GetAccelY() const
  */
 float Class_JY61P::GetAccelZ() const
 {
-    return accel_z;
+    float value;
+    taskENTER_CRITICAL();
+    value = accel_z;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -269,7 +304,11 @@ float Class_JY61P::GetAccelZ() const
  */
 float Class_JY61P::GetGyroX() const
 {
-    return gyro_x;
+    float value;
+    taskENTER_CRITICAL();
+    value = gyro_x;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -279,7 +318,11 @@ float Class_JY61P::GetGyroX() const
  */
 float Class_JY61P::GetGyroY() const
 {
-    return gyro_y;
+    float value;
+    taskENTER_CRITICAL();
+    value = gyro_y;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -289,7 +332,11 @@ float Class_JY61P::GetGyroY() const
  */
 float Class_JY61P::GetGyroZ() const
 {
-    return gyro_z;
+    float value;
+    taskENTER_CRITICAL();
+    value = gyro_z;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -299,7 +346,11 @@ float Class_JY61P::GetGyroZ() const
  */
 float Class_JY61P::GetQuatQ0() const
 {
-    return quat_q0;
+    float value;
+    taskENTER_CRITICAL();
+    value = quat_q0;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -309,7 +360,11 @@ float Class_JY61P::GetQuatQ0() const
  */
 float Class_JY61P::GetQuatQ1() const
 {
-    return quat_q1;
+    float value;
+    taskENTER_CRITICAL();
+    value = quat_q1;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -319,7 +374,11 @@ float Class_JY61P::GetQuatQ1() const
  */
 float Class_JY61P::GetQuatQ2() const
 {
-    return quat_q2;
+    float value;
+    taskENTER_CRITICAL();
+    value = quat_q2;
+    taskEXIT_CRITICAL();
+    return value;
 }
 
 /**
@@ -329,7 +388,43 @@ float Class_JY61P::GetQuatQ2() const
  */
 float Class_JY61P::GetQuatQ3() const
 {
-    return quat_q3;
+    float value;
+    taskENTER_CRITICAL();
+    value = quat_q3;
+    taskEXIT_CRITICAL();
+    return value;
 }
+
+/**
+ * @brief 批量获取所有姿态数据（线程安全，减少临界区进入次数）
+ * 
+ * @param data 输出的姿态数据指针
+ */
+void Class_JY61P::GetAttitudeData(AttitudeData_t *data) const
+{
+    if (data == nullptr) return;
+    
+    taskENTER_CRITICAL();
+    
+    data->roll = roll;
+    data->pitch = pitch;
+    data->yaw = yaw;
+    
+    data->accel_x = accel_x;
+    data->accel_y = accel_y;
+    data->accel_z = accel_z;
+    
+    data->gyro_x = gyro_x;
+    data->gyro_y = gyro_y;
+    data->gyro_z = gyro_z;
+    
+    data->quat_q0 = quat_q0;
+    data->quat_q1 = quat_q1;
+    data->quat_q2 = quat_q2;
+    data->quat_q3 = quat_q3;
+    
+    taskEXIT_CRITICAL();
+}
+
 
 /************************ COPYRIGHT(C) USTC-ROBOWALKER **************************/
