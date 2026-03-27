@@ -59,7 +59,6 @@ static bool g_balance_app_enabled = false;
 static void BalanceApp_InitRobot(void);
 static void BalanceApp_InitImu(void);
 static void BalanceApp_InitMotors(void);
-static void BalanceApp_RegisterMotors(void);
 
 static void vBalanceControlTask(void *pvParameters);
 static void vBalanceMotorSendTask(void *pvParameters);
@@ -85,13 +84,8 @@ static void BalanceApp_InitRobot(void)
 {
     // 整个对象先清零
     memset(&g_balance_robot, 0, sizeof(g_balance_robot));
-
-    g_balance_robot.dt = BALANCE_CTRL_DT;
-    g_balance_robot.enable = false;
-    g_balance_robot.safe = true;
-
-    BalanceObserver_Init(&g_balance_robot);
-    BalanceController_Init(&g_balance_robot);
+    BalanceObserver_Init(&g_balance_robot);                         // 初始化数据收集加整合层
+    BalanceController_Init(&g_balance_robot);                       // 初始化指令控制层
 }
 
 static void BalanceApp_InitImu(void)
@@ -107,31 +101,12 @@ static void BalanceApp_InitImu(void)
 
 static void BalanceApp_InitMotors(void)
 {
-    // =========================
-    // 这里是 6 个达妙电机对象的初始化位置
-    // 你需要按你自己 Class_Motor_DM_Normal 的真实 Init 接口补全
-    //
-    // 例如可能类似：
-    //
-    // g_motor_joint_0.Init(...);
-    // g_motor_joint_1.Init(...);
-    // g_motor_joint_2.Init(...);
-    // g_motor_joint_3.Init(...);
-    // g_motor_wheel_0.Init(...);
-    // g_motor_wheel_1.Init(...);
-    //
-    // 现在我先不乱写，避免把你工程带偏。
-    // =========================
     CAN_Init(&hfdcan1, CAN1_Callback);                              // 电机的CAN
     g_motor_joint_0.Init(&hfdcan1, 0x02, 0x02, Motor_DM_Control_Method_NORMAL_MIT, 12.5f, 25.0f, 10.0f, 10.261194f);
     g_motor_joint_1.Init(&hfdcan1, 0x03, 0x03, Motor_DM_Control_Method_NORMAL_MIT, 12.5f, 25.0f, 10.0f, 10.261194f);
 
     BalanceMotorIf_Init();
-}
-
-static void BalanceApp_RegisterMotors(void)
-{
-    // 逻辑编号和物理对象绑定
+    
     BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_motor_joint_0);
     BalanceMotorIf_RegisterJoint(BAL_JOINT_L_1, &g_motor_joint_1);
 }
@@ -149,9 +124,8 @@ void BalanceApp_Init(void)
     BalanceApp_InitRobot();                             // 初始化机体
     BalanceApp_InitImu();                               // 初始化陀螺仪
     BalanceApp_InitMotors();                            // 初始化电机
-    BalanceApp_RegisterMotors();                        // 注册电机
 
-    g_balance_app_inited = true;
+    g_balance_app_inited = true;                        // 初始化完毕
 }
 
 // =====================================================
@@ -168,7 +142,7 @@ void BalanceApp_Enable(void)
     g_balance_robot.enable = true;
     g_balance_robot.safe = false;
 
-    BalanceMotorIf_SendEnterAll();
+    BalanceMotorIf_SendEnterAll();                      // 使能所有注册的电机
 }
 
 void BalanceApp_Disable(void)
@@ -207,7 +181,6 @@ static void vBalanceControlTask(void *pvParameters)
         // 1) 更新电机反馈
         BalanceMotorIf_UpdateFeedback(&g_balance_robot);
         
-
         // 2) 更新 IMU 统一数据
         BalanceImuIf_Update(&g_balance_robot.imu);
 
@@ -273,7 +246,7 @@ void BalanceApp_Task_Create(void)
 {
     if (!g_balance_app_inited)
     {
-        BalanceApp_Init();
+        BalanceApp_Init();                                      // 初始化
     }
 
     BaseType_t ret;

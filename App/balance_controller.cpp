@@ -111,9 +111,9 @@ void BalanceController_LegLength(BalanceRobot* robot)
     // =========================
     for (int i = 0; i < BALANCE_LEG_NUM; ++i)
     {
-        const float l_ref = robot->ref.target_leg_length[i];
-        const float l_now = robot->leg[i].rod.l0;
-        const float dl_now = robot->leg[i].rod.dl0;
+        const float l_ref = robot->ref.target_leg_length[i];        // 目标腿长
+        const float l_now = robot->leg[i].rod.l0;                   // 当前虚拟腿长
+        const float dl_now = robot->leg[i].rod.dl0;                 // 虚拟腿长变化率
 
         const float err_l = l_ref - l_now;
 
@@ -162,12 +162,12 @@ void BalanceController_Output(BalanceRobot* robot)
     // =========================
     {
         float J[2][2] = {{0.0f, 0.0f}, {0.0f, 0.0f}};
-        BalanceCalcJacobian(robot->leg[0].joint.phi1, robot->leg[0].joint.phi4, J);
+        BalanceCalcJacobian(robot->leg[0].joint.phi1, robot->leg[0].joint.phi4, J);     // 计算雅可比矩阵
 
-        BalanceCalcVmc(robot->cmd[0].rod_f,
-                       robot->cmd[0].rod_tp,
-                       J,
-                       robot->cmd[0].joint_t);
+        BalanceCalcVmc(robot->cmd[0].rod_f,                                             // pid输出的虚拟腿轴向力
+                       robot->cmd[0].rod_tp,                                            // 虚拟腿转动力矩
+                       J,                                                               // 雅可比矩阵
+                       robot->cmd[0].joint_t);                                          // 分配给两个关节电机的力矩
 
         robot->joint_motor_cmd[BAL_JOINT_L_0].pos = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_L_0].vel = 0.0f;

@@ -58,9 +58,9 @@ namespace
             return;
         }
 
-        unwrap->initialized = false;
-        unwrap->raw_last = 0.0f;
-        unwrap->continuous = 0.0f;
+        unwrap->initialized = false;    // 表示这个解包器是否已经接收过第一帧数据
+        unwrap->raw_last = 0.0f;        // 上一次读取到的原始角度
+        unwrap->continuous = 0.0f;      // 解包后的连续角度
     }
 
     static inline float BalanceAngleUnwrapUpdate(BalanceAngleUnwrap* unwrap, float raw_now)
@@ -107,16 +107,17 @@ void BalanceObserver_Init(BalanceRobot* robot)
         return;
     }
 
-    robot->dt = BALANCE_CTRL_DT;
-    robot->enable = false;
-    robot->safe = true;
+    robot->dt = BALANCE_CTRL_DT;                                // 设置控制周期
+    robot->enable = false;                                      // 未使能
+    robot->safe = true;                                         // ？
 
-    robot->body.x = 0.0f;
-    robot->body.x_dot = 0.0f;
-    robot->body.x_acc = 0.0f;
-    robot->body.x_dot_obv = 0.0f;
-    robot->body.x_acc_obv = 0.0f;
-
+    robot->body.x = 0.0f;                                       // 机体位移
+    robot->body.x_dot = 0.0f;                                   // 机体速度
+    robot->body.x_acc = 0.0f;                                   // 加速度
+    robot->body.x_dot_obv = 0.0f;                               // 
+    robot->body.x_acc_obv = 0.0f;                               // 
+    
+    // 初始化每个电机的角度解包器
     for (int i = 0; i < BALANCE_JOINT_NUM; ++i)
     {
         BalanceAngleUnwrapReset(&robot->joint_angle_unwrap[i]);
@@ -152,6 +153,8 @@ void BalanceObserver_UpdateBody(BalanceRobot* robot)
     robot->body.yaw_dot = robot->imu.yaw_dot;
 
     // 平衡主平面暂用 pitch
+    // 机体俯仰角 用于LQR
+    // 机体俯仰角速度 用于LQR
     robot->body.phi = BalanceWrapPi(robot->body.pitch);
     robot->body.phi_dot = robot->body.pitch_dot;
 
@@ -197,22 +200,22 @@ void BalanceObserver_UpdateLeg(BalanceRobot* robot)
         leg.wheel_vel = robot->wheel_motor_fdb[BAL_WHEEL_L].vel;
 
         float l0_phi0[2] = {0.0f, 0.0f};
-        BalanceCalcL0Phi0(leg.joint.phi1, leg.joint.phi4, l0_phi0);
+        BalanceCalcL0Phi0(leg.joint.phi1, leg.joint.phi4, l0_phi0);             // 获得虚拟腿长和虚拟腿角度
 
-        leg.rod.l0 = l0_phi0[0];
-        leg.rod.phi0 = l0_phi0[1];
-        leg.rod.theta = M_PI_2 - leg.rod.phi0 - robot->body.phi;
+        leg.rod.l0 = l0_phi0[0];                                                // 虚拟腿长
+        leg.rod.phi0 = l0_phi0[1];                                              // 虚拟腿角度
+        leg.rod.theta = M_PI_2 - leg.rod.phi0 - robot->body.phi;                // 虚拟腿角度 - 机体仰角
 
         float J[2][2] = {{0.0f, 0.0f}, {0.0f, 0.0f}};
-        BalanceCalcJacobian(leg.joint.phi1, leg.joint.phi4, J);
+        BalanceCalcJacobian(leg.joint.phi1, leg.joint.phi4, J);                 // 计算雅可比矩阵
 
         float d_l0_d_phi0[2] = {0.0f, 0.0f};
-        BalanceCalcdL0dPhi0(J, leg.joint.dphi1, leg.joint.dphi4, d_l0_d_phi0);
+        BalanceCalcdL0dPhi0(J, leg.joint.dphi1, leg.joint.dphi4, d_l0_d_phi0);  // 获得虚拟腿长变化率和虚拟腿角速度
 
-        leg.rod.dl0 = d_l0_d_phi0[0];
-        leg.rod.dphi0 = d_l0_d_phi0[1];
-        leg.rod.dtheta = -leg.rod.dphi0 - robot->body.phi_dot;
-
+        leg.rod.dl0 = d_l0_d_phi0[0];                                           // 虚拟腿长变化率
+        leg.rod.dphi0 = d_l0_d_phi0[1];                                         // 虚拟腿角速度
+        leg.rod.dtheta = -leg.rod.dphi0 - robot->body.phi_dot;                  // 虚拟腿角速度 - 机体角速度
+            
         // 第一版先固定不做离地判定
         leg.is_take_off = false;
 

@@ -271,14 +271,14 @@ void BalanceLegDebug_SetGains(float kp, float kd)
 static void BalanceLegDebug_RunController(void)
 {
     // 只关心左腿
-    BalanceLegState& leg = g_leg_debug_robot.leg[0];
+    BalanceLegState& leg = g_leg_debug_robot.leg[0];                // 获取腿
 
     // 腿长误差
-    const float err_l = g_leg_target_length - leg.rod.l0;
+    const float err_l = g_leg_target_length - leg.rod.l0;           // 误差等于腿长减去目标腿长
 
     // 简单 PD
     float rod_f = g_leg_kp * err_l - g_leg_kd * leg.rod.dl0;
-    rod_f = Clamp(rod_f, -g_leg_force_limit, g_leg_force_limit);
+    rod_f = Clamp(rod_f, -g_leg_force_limit, g_leg_force_limit);    // 输出力
 
     // 第一阶段不做摆角控制
     const float rod_tp = 0.0f;

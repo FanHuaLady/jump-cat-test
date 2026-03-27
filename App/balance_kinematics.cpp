@@ -63,19 +63,22 @@ namespace
         // 上部公共等效点 O
         return {0.0f, 0.0f};
     }
-
+    
+    // 计算出C点的坐标
     static Point2D GetPointC(float phi1)
     {
         const float L1 = BALANCE_DEFAULT_LEG_L1;
         return {L1 * cosf(phi1), L1 * sinf(phi1)};
     }
-
+    
+    // 计算出B点的坐标
     static Point2D GetPointB(float phi4)
     {
         const float L4 = BALANCE_DEFAULT_LEG_L4;
         return {L4 * cosf(phi4), L4 * sinf(phi4)};
     }
-
+    
+    // 计算出P点的坐标
     static Point2D GetPointP(float phi1, float phi4)
     {
         // 上部闭链：
@@ -119,7 +122,8 @@ namespace
         // 后面若发现支链反了，改这里
         return (P1.y > P2.y) ? P1 : P2;
     }
-
+    
+    // 获取点N
     static Point2D GetPointN(float phi1)
     {
         // 由：
@@ -128,14 +132,16 @@ namespace
         //
         // 直接构造 N
 
-        const Point2D O = GetTopCenterO();
-        const Point2D C = GetPointC(phi1);
+        const Point2D O = GetTopCenterO();              // 原点
+        const Point2D C = GetPointC(phi1);              // C点
 
-        const Point2D dir_oc = Normalize(Sub(C, O));
-
+        const Point2D dir_oc = Normalize(Sub(C, O));    // 获得方向
+        
+        // N 在 OC 这条线上，并且距 O 的距离固定
         return Add(O, Scale(dir_oc, BALANCE_DEFAULT_ON_SIGN * BALANCE_DEFAULT_ON_LENGTH));
     }
-
+    
+    // 获得W点
     static Point2D GetWheelCenterW(float phi1, float phi4)
     {
         // 由：
@@ -158,7 +164,8 @@ namespace
 
         return W;
     }
-
+    
+    // 获得虚拟腿
     static void GetVirtualLeg(float phi1, float phi4, float* l0, float* phi0)
     {
         if (l0 == nullptr || phi0 == nullptr)
@@ -171,8 +178,8 @@ namespace
 
         const Point2D OW = Sub(W, O);
 
-        *l0 = Norm(OW);
-        *phi0 = atan2f(OW.y, OW.x);
+        *l0 = Norm(OW);                             // OW长度就是虚拟腿长
+        *phi0 = atan2f(OW.y, OW.x);                 // 虚拟腿角度
     }
 }
 
@@ -220,6 +227,7 @@ void BalanceCalcJacobian(float phi1, float phi4, float J[2][2])
     J[1][1] = (p2[1] - base[1]) / h;
 }
 
+// 获得虚拟腿长度变化率 dl0 和虚拟腿摆角角速度 dphi0
 void BalanceCalcdL0dPhi0(float J[2][2], float dphi1, float dphi4, float out[2])
 {
     if (J == nullptr || out == nullptr)

@@ -88,7 +88,7 @@ typedef struct BalanceBodyState
     float pitch_dot;
     float yaw_dot;                              // IMU 姿态角速度
 
-    float phi;                                  // ?
+    float phi;                                  // 平衡模型的机体俯仰角
     float phi_dot;                              // 平衡模型的机体俯仰角速度
 
     float x;                                    // 车体前向位置
@@ -123,9 +123,9 @@ typedef struct BalanceRefState
 // 单腿控制输出
 typedef struct BalanceLegCmd
 {
-    float rod_f;                                                    // 
-    float rod_tp;
-    float joint_t[2];
+    float rod_f;                                // 虚拟腿轴向力
+    float rod_tp;                               // 虚拟腿转动力矩
+    float joint_t[2];                           // 分配给两个关节电机的力矩
     float wheel_t;
 } BalanceLegCmd;
 
