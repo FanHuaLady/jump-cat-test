@@ -27,7 +27,7 @@ namespace
     // 后面你可以改成：
     // phi0_ref = k_pitch * (pitch_ref - pitch_now)
     // =========================
-    static constexpr float k_leg_ang_ref = 0.0f;
+    static constexpr float k_leg_ang_ref = -1.6580f;
 
     static inline float BalanceClamp(float x, float min_v, float max_v)
     {

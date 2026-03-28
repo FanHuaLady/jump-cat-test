@@ -120,7 +120,7 @@ namespace
 
         // 默认取“更下方”的交点作为 P
         // 后面若发现支链反了，改这里
-        return (P1.y > P2.y) ? P1 : P2;
+        return (P1.y < P2.y) ? P1 : P2;
     }
     
     // 获取点N

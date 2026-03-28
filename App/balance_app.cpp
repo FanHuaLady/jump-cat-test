@@ -71,9 +71,10 @@ static uint16_t g_balance_return_ref_stable_count = 0;
 // =====================================================
 namespace
 {
-    // 回位控制参数
-    static constexpr float kReturnRefKp = 20.0f;
-    static constexpr float kReturnRefKd = 3.0f;
+    // 回位控制参数：简单关节 PD 扭矩回位
+    static constexpr float kReturnRefJointKp = 6.0f;
+    static constexpr float kReturnRefJointKd = 0.8f;
+    static constexpr float kReturnRefJointTorLimit = 1.0f;
 
     // 回位完成判定阈值
     static constexpr float kReturnRefPosEps = 0.05f;   // rad
@@ -81,11 +82,18 @@ namespace
     static constexpr uint16_t kReturnRefStableNeed = 20;
 
     // 模式切换缓冲时间
-    static constexpr uint32_t kSwitchDelayMs = 300U;
+    static constexpr uint32_t kSwitchDelayMs = 1500U;
 
     static inline float AbsFloat(float x)
     {
         return (x >= 0.0f) ? x : -x;
+    }
+
+    static inline float ClampFloat(float x, float min_v, float max_v)
+    {
+        if (x < min_v) return min_v;
+        if (x > max_v) return max_v;
+        return x;
     }
 
     static inline void ClearMotorCmd(BalanceMotorCmd* cmd)
@@ -181,8 +189,8 @@ static void BalanceApp_InitMotors(void)
 
     BalanceMotorIf_Init();
 
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_motor_joint_0);
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_1, &g_motor_joint_1);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_motor_joint_1);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_1, &g_motor_joint_0);
 }
 
 void BalanceApp_Init(void)
@@ -211,7 +219,6 @@ static void BalanceApp_StartReturnToRef(void)
 
 static void BalanceApp_SwitchToNormalMode(void)
 {
-    // 先停一下，避免两个模式切换瞬间抢命令
     BalanceController_Stop(&g_balance_robot);
     BalanceMotorIf_SendCommand(&g_balance_robot);
     vTaskDelay(pdMS_TO_TICKS(kSwitchDelayMs));
@@ -221,7 +228,6 @@ static void BalanceApp_SwitchToNormalMode(void)
 
 static void BalanceApp_SwitchToReturnRefMode(void)
 {
-    // 从正常模式切回回位模式时也先清一次
     BalanceController_Stop(&g_balance_robot);
     BalanceMotorIf_SendCommand(&g_balance_robot);
     vTaskDelay(pdMS_TO_TICKS(kSwitchDelayMs));
@@ -261,11 +267,7 @@ void BalanceApp_Disable(void)
 }
 
 // =====================================================
-// 回参考姿态更新
-//
-// 说明：
-// 这里假设 joint_angle_unwrap[] 结构里有 continuous_angle 成员。
-// 如果你工程里这个成员名不一样，把下面 q0/q1 的读取改成你真实的成员名。
+// 回参考姿态更新：简单关节 PD 扭矩回位
 // =====================================================
 static bool BalanceApp_ReturnToRef_Update(void)
 {
@@ -281,28 +283,38 @@ static bool BalanceApp_ReturnToRef_Update(void)
     const float e0 = q0_ref - q0;
     const float e1 = q1_ref - q1;
 
-    // 清掉腿部虚拟控制量，避免概念混淆
+    // 清掉腿部虚拟控制量
     for (int i = 0; i < BALANCE_LEG_NUM; ++i)
     {
         ClearLegCmd(&g_balance_robot.cmd[i]);
     }
 
-    // 左腿两个关节直接发 MIT 位置回位命令
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].pos = q0_ref;
+    // 简单关节 PD 扭矩回位
+    const float tau0 =
+        ClampFloat(kReturnRefJointKp * e0 - kReturnRefJointKd * dq0,
+                   -kReturnRefJointTorLimit,
+                    kReturnRefJointTorLimit);
+
+    const float tau1 =
+        ClampFloat(kReturnRefJointKp * e1 - kReturnRefJointKd * dq1,
+                   -kReturnRefJointTorLimit,
+                    kReturnRefJointTorLimit);
+
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].pos = 0.0f;
     g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].vel = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].tor = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].kp  = kReturnRefKp;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].kd  = kReturnRefKd;
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].tor = tau0;
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].kp  = 0.0f;
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].kd  = 0.0f;
     g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].enable = true;
 
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].pos = q1_ref;
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].pos = 0.0f;
     g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].vel = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].tor = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].kp  = kReturnRefKp;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].kd  = kReturnRefKd;
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].tor = tau1;
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].kp  = 0.0f;
+    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].kd  = 0.0f;
     g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].enable = true;
 
-    // 其余关节与轮子先关闭
+    // 其余关节和轮子先关闭
     for (int i = 2; i < BALANCE_JOINT_NUM; ++i)
     {
         ClearMotorCmd(&g_balance_robot.joint_motor_cmd[i]);
@@ -345,7 +357,6 @@ static bool BalanceApp_ReturnToRef_Update(void)
 
 // =====================================================
 // 控制任务
-// 2ms：反馈 + IMU + observer + 模式控制
 // =====================================================
 static void vBalanceControlTask(void *pvParameters)
 {
@@ -362,18 +373,18 @@ static void vBalanceControlTask(void *pvParameters)
 
     for (;;)
     {
-        BalanceMotorIf_UpdateFeedback(&g_balance_robot);
+        BalanceMotorIf_UpdateFeedback(&g_balance_robot);                    // 获取电机数据
         BalanceImuIf_Update(&g_balance_robot.imu);
         BalanceObserver_UpdateAll(&g_balance_robot);
 
         if (g_balance_robot.enable && !g_balance_robot.safe)
         {
-            if (g_balance_mode == BAL_APP_MODE_RETURN_REF)          // 如果模式是返回模式
+            if (g_balance_mode == BAL_APP_MODE_RETURN_REF)
             {
-                const bool done = BalanceApp_ReturnToRef_Update();  // 开始返回
+                const bool done = BalanceApp_ReturnToRef_Update();          // 回位
                 if (done)
                 {
-                    BalanceApp_SwitchToNormalMode();                // 返回结束
+                    BalanceApp_SwitchToNormalMode();                        // 模式切换
                 }
             }
             else
@@ -438,6 +449,21 @@ static void vBalancePrintTask(void *pvParameters)
 
     for (;;)
     {
+        const float q0 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous;
+        const float q1 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous;
+        const float dq0 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_0].vel;
+        const float dq1 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_1].vel;
+
+        const float tau0 =
+            ClampFloat(kReturnRefJointKp * (BALANCE_JOINT_L0_CONT_REF - q0) - kReturnRefJointKd * dq0,
+                       -kReturnRefJointTorLimit,
+                        kReturnRefJointTorLimit);
+
+        const float tau1 =
+            ClampFloat(kReturnRefJointKp * (BALANCE_JOINT_L1_CONT_REF - q1) - kReturnRefJointKd * dq1,
+                       -kReturnRefJointTorLimit,
+                        kReturnRefJointTorLimit);
+
         BalanceTool_PrintRaw("\r\n[balance]\r\n");
 
         BalanceTool_PrintFloat4Line("L0",
@@ -455,26 +481,25 @@ static void vBalancePrintTask(void *pvParameters)
                                     "rod_tp",
                                     g_balance_robot.cmd[0].rod_tp);
 
-        BalanceTool_PrintFloat4Line("pitch_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.imu.pitch),
-                                    "pitch_dps",
-                                    BalanceTool_RadToDeg(g_balance_robot.imu.pitch_dot));
-
         BalanceTool_PrintFloat4Line("phi1_deg",
                                     BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi1),
                                     "phi4_deg",
                                     BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi4));
 
-        // 回位相关打印
         BalanceTool_PrintFloat4Line("q0_cont",
-                                    g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous,       // 连续角
+                                    q0,
                                     "q1_cont",
-                                    g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous);      // 连续角
+                                    q1);
 
         BalanceTool_PrintFloat4Line("q0_err",
-                                    BALANCE_JOINT_L0_CONT_REF - g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous,
+                                    BALANCE_JOINT_L0_CONT_REF - q0,
                                     "q1_err",
-                                    BALANCE_JOINT_L1_CONT_REF - g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous);
+                                    BALANCE_JOINT_L1_CONT_REF - q1);
+
+        BalanceTool_PrintFloat4Line("tau0",
+                                    tau0,
+                                    "tau1",
+                                    tau1);
 
         BalanceTool_PrintFloat4Line("mode",
                                     (g_balance_mode == BAL_APP_MODE_RETURN_REF) ? 0.0f : 1.0f,
