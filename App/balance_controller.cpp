@@ -13,14 +13,14 @@ namespace
     // =========================
     // 腿长控制参数
     // =========================
-    static constexpr float k_leg_len_kp = 60.0f;
-    static constexpr float k_leg_len_kd = 4.0f;
+    static constexpr float k_leg_len_kp = 12.0f;
+    static constexpr float k_leg_len_kd = 0.8f;
 
     // =========================
     // 虚拟杆角度控制参数
     // =========================
-    static constexpr float k_leg_ang_kp = 35.0f;
-    static constexpr float k_leg_ang_kd = 2.5f;
+    static constexpr float k_leg_ang_kp = 12.0f;
+    static constexpr float k_leg_ang_kd = 0.8f;
 
     // =========================
     // 当前第一版目标虚拟杆角度
