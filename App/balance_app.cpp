@@ -156,6 +156,11 @@ void CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
     case (0x03):
         g_motor_joint_1.CAN_RxCpltCallback();
         break;
+    case (0x04):
+        g_motor_joint_2.CAN_RxCpltCallback();
+        break;
+    case (0x05):
+        g_motor_joint_3.CAN_RxCpltCallback();
     default:
         break;
     }
@@ -186,11 +191,19 @@ static void BalanceApp_InitMotors(void)
     g_motor_joint_1.Init(&hfdcan1, 0x03, 0x03,
                          Motor_DM_Control_Method_NORMAL_MIT,
                          12.5f, 25.0f, 10.0f, 10.261194f);
+    g_motor_joint_2.Init(&hfdcan1, 0x04, 0x04,
+                         Motor_DM_Control_Method_NORMAL_MIT,
+                         12.5f, 25.0f, 10.0f, 10.261194f);
+    g_motor_joint_3.Init(&hfdcan1, 0x05, 0x05,
+                         Motor_DM_Control_Method_NORMAL_MIT,
+                         12.5f, 25.0f, 10.0f, 10.261194f);
 
     BalanceMotorIf_Init();
 
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_motor_joint_1);
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_1, &g_motor_joint_0);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_motor_joint_0);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_1, &g_motor_joint_1);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_R_0, &g_motor_joint_3);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_R_1, &g_motor_joint_2);
 }
 
 void BalanceApp_Init(void)
@@ -466,25 +479,20 @@ static void vBalancePrintTask(void *pvParameters)
 
         BalanceTool_PrintRaw("\r\n[balance]\r\n");
 
-        BalanceTool_PrintFloat4Line("L0",
-                                    g_balance_robot.leg[0].rod.l0,
-                                    "dL0",
-                                    g_balance_robot.leg[0].rod.dl0);
+        BalanceTool_PrintFloat4Line("L1",
+                                    g_balance_robot.leg[1].rod.l0,
+                                    "dL1",
+                                    g_balance_robot.leg[1].rod.dl0);
 
         BalanceTool_PrintFloat4Line("phi0_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].rod.phi0),
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].rod.phi0),
                                     "dphi0_dps",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].rod.dphi0));
-
-        BalanceTool_PrintFloat4Line("rod_f",
-                                    g_balance_robot.cmd[0].rod_f,
-                                    "rod_tp",
-                                    g_balance_robot.cmd[0].rod_tp);
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].rod.dphi0));
 
         BalanceTool_PrintFloat4Line("phi1_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi1),
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].joint.phi1),
                                     "phi4_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi4));
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].joint.phi4));
 
         BalanceTool_PrintFloat4Line("q0_cont",
                                     q0,

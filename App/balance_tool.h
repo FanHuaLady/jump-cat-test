@@ -18,6 +18,9 @@ void BalanceTool_PrintFloat4Line(const char* name0, float value0,
 
 float BalanceTool_RadToDeg(float rad);
 
+float BalanceTool_WrapRad(float rad);
+float BalanceTool_AngleDiffRad(float target, float current);
+
 #ifdef __cplusplus
 }
 #endif

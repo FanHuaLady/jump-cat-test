@@ -6,6 +6,8 @@
 #include "balance_config.h"
 #include "balance_kinematics.h"
 
+#include "balance_tool.h"
+
 namespace
 {
     // =========================
@@ -158,7 +160,7 @@ void BalanceController_LegAngle(BalanceRobot* robot)
         const float dphi0_now = robot->leg[i].rod.dphi0;                        // 当前虚拟杆角速度
 
         const float phi0_ref = k_leg_ang_ref;                                   // 目标虚拟杆角度
-        const float err_phi0 = phi0_ref - phi0_now;                             // 角度误差
+        const float err_phi0 = BalanceTool_AngleDiffRad(phi0_ref, phi0_now);    // 角度误差
 
         // 虚拟杆角度 PD
         float rod_tp = k_leg_ang_kp * err_phi0 - k_leg_ang_kd * dphi0_now;      // 扭矩输出

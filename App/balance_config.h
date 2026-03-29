@@ -24,9 +24,9 @@
 #define BALANCE_DEFAULT_LEG_L4        0.105f
 #define BALANCE_DEFAULT_LEG_L5        0.000f
 
-#define BALANCE_DEFAULT_LEG_LEN_MIN   0.180f
-#define BALANCE_DEFAULT_LEG_LEN_MAX   0.320f
-#define BALANCE_DEFAULT_LEG_LEN_STAND 0.250f
+#define BALANCE_DEFAULT_LEG_LEN_MIN   0.100f
+#define BALANCE_DEFAULT_LEG_LEN_MAX   0.400f
+#define BALANCE_DEFAULT_LEG_LEN_STAND 0.200f
 
 #define BALANCE_DEFAULT_ON_LENGTH     0.230f
 #define BALANCE_DEFAULT_CN_LENGTH     0.125f
@@ -57,16 +57,16 @@
 
 // ---- 参考姿态下的电机连续角读数 a ----
 // 这里先给 0，占位，等你实测后填进去
-#define BALANCE_JOINT_L0_CONT_REF     1.88811f
-#define BALANCE_JOINT_L1_CONT_REF     0.15163f
+#define BALANCE_JOINT_L0_CONT_REF     0.2117f
+#define BALANCE_JOINT_L1_CONT_REF     1.7568f
 #define BALANCE_JOINT_R0_CONT_REF     0.0f
 #define BALANCE_JOINT_R1_CONT_REF     0.0f
 
 // ---- 参考姿态下的模型角 phi_ref ----
 // 按 O 为原点、x 右、y 上、逆时针为正 的坐标系填写
 // 这里先给 0，占位，等你确定后填进去
-#define BALANCE_JOINT_L0_PHI_REF      -3.0543f
-#define BALANCE_JOINT_L1_PHI_REF      -0.08727f
+#define BALANCE_JOINT_L0_PHI_REF      -2.35619f
+#define BALANCE_JOINT_L1_PHI_REF      -0.7854f
 #define BALANCE_JOINT_R0_PHI_REF      0.0f
 #define BALANCE_JOINT_R1_PHI_REF      0.0f
 

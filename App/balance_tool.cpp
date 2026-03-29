@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <math.h>
 
 #include "usart.h"
 
@@ -10,6 +11,8 @@ namespace
 {
     constexpr uint16_t kToolTxTimeoutMs = 20U;
     constexpr float kRadToDeg = 57.2957795f;
+    constexpr float kPi = 3.14159265358979323846f;
+    constexpr float kTwoPi = 6.28318530717958647692f;
     
     int AppendFloat4(char* buf, size_t buf_size, const char* name, float value)
     {
@@ -33,12 +36,31 @@ namespace
         return snprintf(buf, buf_size, "%s=%ld.%04ld",
                         name, integer_part, fraction_part);
     }
-    
 }
 
 float BalanceTool_RadToDeg(float rad)
 {
     return rad * kRadToDeg;
+}
+
+float BalanceTool_WrapRad(float rad)
+{
+    while (rad >= kPi)
+    {
+        rad -= kTwoPi;
+    }
+
+    while (rad < -kPi)
+    {
+        rad += kTwoPi;
+    }
+
+    return rad;
+}
+
+float BalanceTool_AngleDiffRad(float target, float current)
+{
+    return BalanceTool_WrapRad(target - current);
 }
 
 void BalanceTool_PrintRaw(const char* text)
