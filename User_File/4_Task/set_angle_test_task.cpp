@@ -40,6 +40,13 @@ static TaskHandle_t xSetAngleTaskHandle = NULL;
 
 // ========== 互斥锁 ==========
 static SemaphoreHandle_t xTargetMutex = NULL;
+// ========== PID 参数互斥锁 ==========
+static SemaphoreHandle_t xPIDMutex = NULL;
+
+// ========== PID 参数变量 ==========
+static float pid_kp = 0.5f;
+static float pid_ki = 0.0f;
+static float pid_kd = 0.0f;
 
 // ========== 目标角度变量 ==========
 static bool control_enable = false;
@@ -57,7 +64,7 @@ static float test_error_yaw = 0.0f;        // 测试用角度误差
 static float test_error_pitch = 0.0f;
 static float test_error_roll = 0.0f;
 
-// ========== 通用读写函数 ==========
+// ========== 通用角度 读写函数 ==========
 static void Set_Target_Angle(float *target, float value)
 {
     xSemaphoreTake(xTargetMutex, portMAX_DELAY);
@@ -73,6 +80,35 @@ static float Get_Target_Angle(float *target)
     xSemaphoreGive(xTargetMutex);
     return value;
 }
+
+// ========== 通用 PID 参数读写函数 ==========
+static void Set_PID_Param(float *param, float value)
+{
+    if (xPIDMutex != NULL)
+    {
+        xSemaphoreTake(xPIDMutex, portMAX_DELAY);
+        *param = value;
+        xSemaphoreGive(xPIDMutex);
+    }
+}
+
+static float Get_PID_Param(float *param)
+{
+    float value;
+    if (xPIDMutex != NULL)
+    {
+        xSemaphoreTake(xPIDMutex, portMAX_DELAY);
+        value = *param;
+        xSemaphoreGive(xPIDMutex);
+    }
+    else
+    {
+        value = *param;
+    }
+    return value;
+}
+
+
 
 // ========== 外部接口（VOFA写入）==========
 void Set_Target_Yaw(float yaw_deg)
@@ -108,6 +144,42 @@ static float Get_Target_Roll(void)
 {
     return Get_Target_Angle(&target_roll);
 }
+
+// ========== 外部接口（VOFA写入 PID 参数）==========
+void Set_Angle_PID_Kp(float kp)
+{
+    Set_PID_Param(&pid_kp, kp);
+    Set_Angle_PID.Set_K_P(kp);
+}
+
+void Set_Angle_PID_Ki(float ki)
+{
+    Set_PID_Param(&pid_ki, ki);
+    Set_Angle_PID.Set_K_I(ki);
+}
+
+void Set_Angle_PID_Kd(float kd)
+{
+    Set_PID_Param(&pid_kd, kd);
+    Set_Angle_PID.Set_K_D(kd);
+}
+
+// ========== 测试接口（供VOFA读取 PID 参数）==========
+float Test_Get_PID_Kp(void)
+{
+    return Get_PID_Param(&pid_kp);
+}
+
+float Test_Get_PID_Ki(void)
+{
+    return Get_PID_Param(&pid_ki);
+}
+
+float Test_Get_PID_Kd(void)
+{
+    return Get_PID_Param(&pid_kd);
+}
+
 
 // ========== 测试接口（供VOFA读取）==========
 float Test_Get_Target_Yaw(void)
@@ -231,6 +303,7 @@ static void vSetAngleTask(void *pvParameters)
             Set_Angle_PID.Set_Target(0.0f);
             Set_Angle_PID.Set_Now(error_yaw_angle);
 
+
             Set_Angle_PID.TIM_Calculate_PeriodElapsedCallback();
 
             output_speed_dps = -Set_Angle_PID.Get_Out();
@@ -260,6 +333,13 @@ void Set_Angle_Task_Create(void)
     {
         while (1) { }
     }
+
+    // 创建 PID 参数互斥锁
+    xPIDMutex = xSemaphoreCreateMutex();
+    if (xPIDMutex == NULL)
+    {
+        while (1) { }
+    }
    
     // 初始化目标角度
     target_yaw = 0.0f;
@@ -273,10 +353,15 @@ void Set_Angle_Task_Create(void)
     test_error_yaw = 0.0f;
     test_error_pitch = 0.0f;
     test_error_roll = 0.0f;
+
+    // 初始化 PID 参数
+    pid_kp = 0.5f;
+    pid_ki = 0.0f;
+    pid_kd = 0.0f;
     
      control_enable = false;
 
-    Set_Angle_PID.Init(1, 0, 0, 0.0f, 0.0f, 200.0f, 0.1f);  
+    Set_Angle_PID.Init(pid_kp, pid_ki, pid_kd, 0.0f, 0.0f, 200.0f, 0.1f);  
     // 创建任务
     BaseType_t ret = xTaskCreate(vSetAngleTask, "SetAngleTask", 512, NULL, 2, &xSetAngleTaskHandle);
     if (ret != pdPASS)
