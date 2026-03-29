@@ -7,6 +7,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "queue.h"  // 传递打印任务使用
+
+
+
+// 注意：这里定义为全局变量，方便VOFA任务访问
+QueueHandle_t xIMUDataQueue = NULL;
+
 // 任务句柄
 static TaskHandle_t xJY61PTaskHandle = NULL;
 
@@ -64,7 +71,8 @@ static void vJY61PTask(void *pvParameters)
 {
     // 初始化JY61P，绑定串口10
     BSP_JY61P.Init(&huart10);   // 波特率为230400
-    
+    AttitudeData_t data;
+
     uint32_t last_print = 0;
     
     while (1)
@@ -75,49 +83,14 @@ static void vJY61PTask(void *pvParameters)
         {
             last_print = now;
             
-            // 使用批量接口获取所有数据（一次临界区，效率高）
-            AttitudeData_t data;
             BSP_JY61P.GetAttitudeData(&data);
             
-            float roll = BSP_JY61P.GetRoll();
-
-            // 转换所有数据为字符串
-            char yaw_str[20], pitch_str[20], roll_str[20];
-            float_to_str(data.yaw, yaw_str, sizeof(yaw_str));
-            float_to_str(data.pitch, pitch_str, sizeof(pitch_str));
-            float_to_str(roll, roll_str, sizeof(roll_str));
             
-            char accel_x_str[20], accel_y_str[20], accel_z_str[20];
-            float_to_str(data.accel_x, accel_x_str, sizeof(accel_x_str));
-            float_to_str(data.accel_y, accel_y_str, sizeof(accel_y_str));
-            float_to_str(data.accel_z, accel_z_str, sizeof(accel_z_str));  
-            
-            char gyro_x_str[20], gyro_y_str[20], gyro_z_str[20];
-            float_to_str(data.gyro_x, gyro_x_str, sizeof(gyro_x_str));
-            float_to_str(data.gyro_y, gyro_y_str, sizeof(gyro_y_str));
-            float_to_str(data.gyro_z, gyro_z_str, sizeof(gyro_z_str));
-            
-            char quat_q0_str[20], quat_q1_str[20], quat_q2_str[20], quat_q3_str[20];
-            float_to_str(data.quat_q0, quat_q0_str, sizeof(quat_q0_str));
-            float_to_str(data.quat_q1, quat_q1_str, sizeof(quat_q1_str));
-            float_to_str(data.quat_q2, quat_q2_str, sizeof(quat_q2_str));
-            float_to_str(data.quat_q3, quat_q3_str, sizeof(quat_q3_str));
-            
-            // 合并为一次发送
-            char buffer[512];
-            int dlen = snprintf(buffer, sizeof(buffer),
-                "=== JY61P ===\r\n"
-                "yaw:%s pitch:%s roll:%s\r\n"
-                "accel{x:%s y:%s z:%s}\r\n"
-                "gyro{x:%s y:%s z:%s}\r\n"
-                "quat{q0:%s q1:%s q2:%s q3:%s}\r\n"
-                "============\r\n",
-                yaw_str, pitch_str, roll_str,
-                accel_x_str, accel_y_str, accel_z_str,
-                gyro_x_str, gyro_y_str, gyro_z_str,
-                quat_q0_str, quat_q1_str, quat_q2_str, quat_q3_str);
-            
-            HAL_UART_Transmit(&huart7, (uint8_t*)buffer, dlen, HAL_MAX_DELAY);
+            // 使用 Overwrite 方式，只保留最新数据，避免队列满阻塞
+            if (xIMUDataQueue != NULL)
+            {
+                xQueueOverwrite(xIMUDataQueue, &data);
+            }
 
         }
         
@@ -136,6 +109,20 @@ static void vJY61PTask(void *pvParameters)
 void JY61P_Task_Create(void)
 {
     BSP_Power.Init(false,false,true);
+
+    // 队列长度为1，只保存最新数据
+    // 如果创建失败，可以通过返回值判断
+    xIMUDataQueue = xQueueCreate(1, sizeof(AttitudeData_t));
+    if (xIMUDataQueue == NULL)
+    {
+        // 队列创建失败，可以根据需要添加错误处理
+        // 例如：死循环或记录错误日志
+        while (1)
+        {
+            // 队列创建失败，系统无法正常工作
+        }
+    }
+
     BaseType_t ret = xTaskCreate(vJY61PTask,          // 任务函数
                                  "vJY61PTask",        // 任务名称
                                  512,                  // 栈大小（字）

@@ -21,9 +21,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-// rpm换算到rad/s
+// rpm换算到rad/s   将转速从 RPM（转/分钟） 转换为 rad/s（弧度/秒）
 const float BASIC_MATH_RPM_TO_RADPS = 2.0f * PI / 60.0f;
-// deg换算到rad
+// deg换算到rad     将角度从 度（°） 转换为 弧度（rad）
 const float BASIC_MATH_DEG_TO_RAD = PI / 180.0f;
 // 摄氏度换算到开氏度
 const float BASIC_MATH_CELSIUS_TO_KELVIN = 273.15f;

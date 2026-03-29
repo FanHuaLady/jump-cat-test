@@ -23,6 +23,9 @@
 
 /* Function prototypes -------------------------------------------------------*/
 
+
+Class_Vofa_USB Vofa_USB;
+Class_Vofa_UART Vofa_UART;
 /**
  * @brief vofa初始化
  *
@@ -69,6 +72,8 @@ void Class_Vofa_UART::Init(const UART_HandleTypeDef *huart, const uint8_t &__Rx_
     Rx_Variable_Num = __Rx_Variable_Assignment_Num;
     Rx_Variable_List = const_cast<char **>(__Rx_Variable_Assignment_List);
     Frame_Tail = __Frame_Tail;
+
+
 }
 
 /**
