@@ -1,23 +1,19 @@
 E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/User_File/2_Device/Motor/Motor_DM/dvc_motor_dm.h:197:7:Class_Motor_DM_Normal::Class_Motor_DM_Normal()	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:87:25:float {anonymous}::AbsFloat(float)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:92:25:float {anonymous}::ClampFloat(float, float, float)	24	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:99:24:void {anonymous}::ClearMotorCmd(BalanceMotorCmd*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:114:24:void {anonymous}::ClearLegCmd(BalanceLegCmd*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:149:6:void CAN1_Callback(FDCAN_RxHeaderTypeDef&, uint8_t*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:167:13:void BalanceApp_InitRobot()	8	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:174:13:void BalanceApp_InitImu()	8	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:179:13:void BalanceApp_InitMotors()	72	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:196:6:void BalanceApp_Init()	8	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:213:13:void BalanceApp_StartReturnToRef()	4	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:220:13:void BalanceApp_SwitchToNormalMode()	8	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:229:13:void BalanceApp_SwitchToReturnRefMode()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:99:24:void {anonymous}::ClearLegCmd(BalanceLegCmd*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:133:6:void CAN1_Callback(FDCAN_RxHeaderTypeDef&, uint8_t*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:157:13:void BalanceApp_InitRobot()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:165:13:void BalanceApp_InitImu()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:170:13:void BalanceApp_InitMotors()	112	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:195:6:void BalanceApp_Init()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:212:13:void BalanceApp_StartReturnToRef()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:218:13:void BalanceApp_SwitchToNormalMode()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:228:13:void BalanceApp_SwitchToReturnRefMode()	8	static
 E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:241:6:void BalanceApp_Enable()	8	static
 E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:258:6:void BalanceApp_Disable()	8	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:272:13:bool BalanceApp_ReturnToRef_Update()	64	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:361:13:void vBalanceControlTask(void*)	24	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:410:13:void vBalanceMotorSendTask(void*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:428:13:void vBalanceAliveTask(void*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:444:13:void vBalancePrintTask(void*)	48	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:516:6:void BalanceApp_Task_Create()	24	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:568:1:void __static_initialization_and_destruction_0()	8	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:568:1:cpp)	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:273:13:void vBalanceControlTask(void*)	24	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:329:13:void vBalanceMotorSendTask(void*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:347:13:void vBalanceAliveTask(void*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:363:13:void vBalancePrintTask(void*)	40	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:425:6:void BalanceApp_Task_Create()	24	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:477:1:void __static_initialization_and_destruction_0()	8	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_app.cpp:477:1:cpp)	8	static

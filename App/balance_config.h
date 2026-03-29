@@ -52,23 +52,23 @@
 // ---- 方向修正 ----
 #define BALANCE_JOINT_L0_SIGN         1.0f
 #define BALANCE_JOINT_L1_SIGN         1.0f
-#define BALANCE_JOINT_R0_SIGN         1.0f
-#define BALANCE_JOINT_R1_SIGN         1.0f
+#define BALANCE_JOINT_R0_SIGN         -1.0f
+#define BALANCE_JOINT_R1_SIGN         -1.0f
 
 // ---- 参考姿态下的电机连续角读数 a ----
 // 这里先给 0，占位，等你实测后填进去
-#define BALANCE_JOINT_L0_CONT_REF     0.2117f
-#define BALANCE_JOINT_L1_CONT_REF     1.7568f
-#define BALANCE_JOINT_R0_CONT_REF     0.0f
-#define BALANCE_JOINT_R1_CONT_REF     0.0f
+#define BALANCE_JOINT_L0_CONT_REF     -0.0067f
+#define BALANCE_JOINT_L1_CONT_REF     0.0028f
+#define BALANCE_JOINT_R0_CONT_REF     -0.0146f
+#define BALANCE_JOINT_R1_CONT_REF     1.7012f
 
 // ---- 参考姿态下的模型角 phi_ref ----
 // 按 O 为原点、x 右、y 上、逆时针为正 的坐标系填写
 // 这里先给 0，占位，等你确定后填进去
 #define BALANCE_JOINT_L0_PHI_REF      -2.35619f
 #define BALANCE_JOINT_L1_PHI_REF      -0.7854f
-#define BALANCE_JOINT_R0_PHI_REF      0.0f
-#define BALANCE_JOINT_R1_PHI_REF      0.0f
+#define BALANCE_JOINT_R0_PHI_REF      -2.35619f
+#define BALANCE_JOINT_R1_PHI_REF      -0.7854f
 
 // =========================
 // 默认安全限制

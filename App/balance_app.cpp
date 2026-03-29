@@ -11,6 +11,7 @@
 #include "balance_observer.h"
 #include "balance_controller.h"
 #include "balance_tool.h"
+#include "balance_ref_pose.h"
 
 #include "fdcan.h"
 #include "dvc_motor_dm.h"
@@ -61,33 +62,17 @@ enum
 static uint8_t g_balance_mode = BAL_APP_MODE_RETURN_REF;
 
 // =====================================================
-// 回位状态
+// 参考姿态模块状态
 // =====================================================
-static bool g_balance_return_ref_done = false;
-static uint16_t g_balance_return_ref_stable_count = 0;
+static BalanceRefPoseState g_balance_ref_pose;
 
 // =====================================================
 // 内部参数
 // =====================================================
 namespace
 {
-    // 回位控制参数：简单关节 PD 扭矩回位
-    static constexpr float kReturnRefJointKp = 6.0f;
-    static constexpr float kReturnRefJointKd = 0.8f;
-    static constexpr float kReturnRefJointTorLimit = 1.0f;
-
-    // 回位完成判定阈值
-    static constexpr float kReturnRefPosEps = 0.05f;   // rad
-    static constexpr float kReturnRefVelEps = 0.10f;   // rad/s
-    static constexpr uint16_t kReturnRefStableNeed = 20;
-
     // 模式切换缓冲时间
     static constexpr uint32_t kSwitchDelayMs = 1500U;
-
-    static inline float AbsFloat(float x)
-    {
-        return (x >= 0.0f) ? x : -x;
-    }
 
     static inline float ClampFloat(float x, float min_v, float max_v)
     {
@@ -134,7 +119,6 @@ static void BalanceApp_InitImu(void);
 static void BalanceApp_InitMotors(void);
 
 static void BalanceApp_StartReturnToRef(void);
-static bool BalanceApp_ReturnToRef_Update(void);
 static void BalanceApp_SwitchToNormalMode(void);
 static void BalanceApp_SwitchToReturnRefMode(void);
 
@@ -150,17 +134,18 @@ void CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
 {
     switch (Header.Identifier)
     {
-    case (0x02):
+    case (0x05):
         g_motor_joint_0.CAN_RxCpltCallback();
         break;
-    case (0x03):
+    case (0x04):
         g_motor_joint_1.CAN_RxCpltCallback();
         break;
-    case (0x04):
+    case (0x02):
         g_motor_joint_2.CAN_RxCpltCallback();
         break;
-    case (0x05):
+    case (0x03):
         g_motor_joint_3.CAN_RxCpltCallback();
+        break;
     default:
         break;
     }
@@ -174,6 +159,7 @@ static void BalanceApp_InitRobot(void)
     memset(&g_balance_robot, 0, sizeof(g_balance_robot));
     BalanceObserver_Init(&g_balance_robot);
     BalanceController_Init(&g_balance_robot);
+    BalanceRefPose_Init(&g_balance_ref_pose);
 }
 
 static void BalanceApp_InitImu(void)
@@ -185,25 +171,25 @@ static void BalanceApp_InitMotors(void)
 {
     CAN_Init(&hfdcan1, CAN1_Callback);
 
-    g_motor_joint_0.Init(&hfdcan1, 0x02, 0x02,
+    g_motor_joint_0.Init(&hfdcan1, 0x05, 0x05,
                          Motor_DM_Control_Method_NORMAL_MIT,
                          12.5f, 25.0f, 10.0f, 10.261194f);
-    g_motor_joint_1.Init(&hfdcan1, 0x03, 0x03,
+    g_motor_joint_1.Init(&hfdcan1, 0x04, 0x04,
                          Motor_DM_Control_Method_NORMAL_MIT,
                          12.5f, 25.0f, 10.0f, 10.261194f);
-    g_motor_joint_2.Init(&hfdcan1, 0x04, 0x04,
+    g_motor_joint_2.Init(&hfdcan1, 0x02, 0x02,
                          Motor_DM_Control_Method_NORMAL_MIT,
                          12.5f, 25.0f, 10.0f, 10.261194f);
-    g_motor_joint_3.Init(&hfdcan1, 0x05, 0x05,
+    g_motor_joint_3.Init(&hfdcan1, 0x03, 0x03,
                          Motor_DM_Control_Method_NORMAL_MIT,
                          12.5f, 25.0f, 10.0f, 10.261194f);
 
     BalanceMotorIf_Init();
 
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_motor_joint_0);
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_1, &g_motor_joint_1);
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_R_0, &g_motor_joint_3);
-    BalanceMotorIf_RegisterJoint(BAL_JOINT_R_1, &g_motor_joint_2);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_0, &g_motor_joint_1);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_L_1, &g_motor_joint_0);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_R_0, &g_motor_joint_2);
+    BalanceMotorIf_RegisterJoint(BAL_JOINT_R_1, &g_motor_joint_3);
 }
 
 void BalanceApp_Init(void)
@@ -225,13 +211,13 @@ void BalanceApp_Init(void)
 // =====================================================
 static void BalanceApp_StartReturnToRef(void)
 {
-    g_balance_return_ref_done = false;
-    g_balance_return_ref_stable_count = 0;
-    g_balance_mode = BAL_APP_MODE_RETURN_REF;
+    BalanceRefPose_Start(&g_balance_ref_pose);
+    g_balance_mode = BALANCE_REF_POSE_MODE_RIGHT_ONLY;
 }
 
 static void BalanceApp_SwitchToNormalMode(void)
 {
+    BalanceRefPose_Stop(&g_balance_ref_pose);
     BalanceController_Stop(&g_balance_robot);
     BalanceMotorIf_SendCommand(&g_balance_robot);
     vTaskDelay(pdMS_TO_TICKS(kSwitchDelayMs));
@@ -241,6 +227,7 @@ static void BalanceApp_SwitchToNormalMode(void)
 
 static void BalanceApp_SwitchToReturnRefMode(void)
 {
+    BalanceRefPose_Stop(&g_balance_ref_pose);
     BalanceController_Stop(&g_balance_robot);
     BalanceMotorIf_SendCommand(&g_balance_robot);
     vTaskDelay(pdMS_TO_TICKS(kSwitchDelayMs));
@@ -274,98 +261,10 @@ void BalanceApp_Disable(void)
     g_balance_robot.enable = false;
     g_balance_robot.safe = true;
 
+    BalanceRefPose_Stop(&g_balance_ref_pose);
     BalanceController_Stop(&g_balance_robot);
     BalanceMotorIf_SendCommand(&g_balance_robot);
     BalanceMotorIf_SendExitAll();
-}
-
-// =====================================================
-// 回参考姿态更新：简单关节 PD 扭矩回位
-// =====================================================
-static bool BalanceApp_ReturnToRef_Update(void)
-{
-    const float q0 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous;
-    const float q1 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous;
-
-    const float dq0 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_0].vel;
-    const float dq1 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_1].vel;
-
-    const float q0_ref = BALANCE_JOINT_L0_CONT_REF;
-    const float q1_ref = BALANCE_JOINT_L1_CONT_REF;
-
-    const float e0 = q0_ref - q0;
-    const float e1 = q1_ref - q1;
-
-    // 清掉腿部虚拟控制量
-    for (int i = 0; i < BALANCE_LEG_NUM; ++i)
-    {
-        ClearLegCmd(&g_balance_robot.cmd[i]);
-    }
-
-    // 简单关节 PD 扭矩回位
-    const float tau0 =
-        ClampFloat(kReturnRefJointKp * e0 - kReturnRefJointKd * dq0,
-                   -kReturnRefJointTorLimit,
-                    kReturnRefJointTorLimit);
-
-    const float tau1 =
-        ClampFloat(kReturnRefJointKp * e1 - kReturnRefJointKd * dq1,
-                   -kReturnRefJointTorLimit,
-                    kReturnRefJointTorLimit);
-
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].pos = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].vel = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].tor = tau0;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].kp  = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].kd  = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_0].enable = true;
-
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].pos = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].vel = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].tor = tau1;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].kp  = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].kd  = 0.0f;
-    g_balance_robot.joint_motor_cmd[BAL_JOINT_L_1].enable = true;
-
-    // 其余关节和轮子先关闭
-    for (int i = 2; i < BALANCE_JOINT_NUM; ++i)
-    {
-        ClearMotorCmd(&g_balance_robot.joint_motor_cmd[i]);
-    }
-
-    for (int i = 0; i < BALANCE_WHEEL_NUM; ++i)
-    {
-        ClearMotorCmd(&g_balance_robot.wheel_motor_cmd[i]);
-    }
-
-    // 到位判定
-    const bool pos_ok =
-        (AbsFloat(e0) < kReturnRefPosEps) &&
-        (AbsFloat(e1) < kReturnRefPosEps);
-
-    const bool vel_ok =
-        (AbsFloat(dq0) < kReturnRefVelEps) &&
-        (AbsFloat(dq1) < kReturnRefVelEps);
-
-    if (pos_ok && vel_ok)
-    {
-        if (g_balance_return_ref_stable_count < 0xFFFFU)
-        {
-            g_balance_return_ref_stable_count++;
-        }
-    }
-    else
-    {
-        g_balance_return_ref_stable_count = 0;
-    }
-
-    if (g_balance_return_ref_stable_count >= kReturnRefStableNeed)
-    {
-        g_balance_return_ref_done = true;
-        return true;
-    }
-
-    return false;
 }
 
 // =====================================================
@@ -386,7 +285,7 @@ static void vBalanceControlTask(void *pvParameters)
 
     for (;;)
     {
-        BalanceMotorIf_UpdateFeedback(&g_balance_robot);                    // 获取电机数据
+        BalanceMotorIf_UpdateFeedback(&g_balance_robot);   // 获取电机数据
         BalanceImuIf_Update(&g_balance_robot.imu);
         BalanceObserver_UpdateAll(&g_balance_robot);
 
@@ -394,10 +293,16 @@ static void vBalanceControlTask(void *pvParameters)
         {
             if (g_balance_mode == BAL_APP_MODE_RETURN_REF)
             {
-                const bool done = BalanceApp_ReturnToRef_Update();          // 回位
-                if (done)
+                for (int i = 0; i < BALANCE_LEG_NUM; ++i)
                 {
-                    BalanceApp_SwitchToNormalMode();                        // 模式切换
+                    ClearLegCmd(&g_balance_robot.cmd[i]);
+                }
+
+                BalanceRefPose_Update(&g_balance_ref_pose, &g_balance_robot);
+
+                if (BalanceRefPose_IsFinished(&g_balance_ref_pose))
+                {
+                    BalanceApp_SwitchToNormalMode();
                 }
             }
             else
@@ -410,6 +315,7 @@ static void vBalanceControlTask(void *pvParameters)
         }
         else
         {
+            BalanceRefPose_Stop(&g_balance_ref_pose);
             BalanceController_Stop(&g_balance_robot);
         }
 
@@ -467,32 +373,22 @@ static void vBalancePrintTask(void *pvParameters)
         const float dq0 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_0].vel;
         const float dq1 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_1].vel;
 
-        const float tau0 =
-            ClampFloat(kReturnRefJointKp * (BALANCE_JOINT_L0_CONT_REF - q0) - kReturnRefJointKd * dq0,
-                       -kReturnRefJointTorLimit,
-                        kReturnRefJointTorLimit);
-
-        const float tau1 =
-            ClampFloat(kReturnRefJointKp * (BALANCE_JOINT_L1_CONT_REF - q1) - kReturnRefJointKd * dq1,
-                       -kReturnRefJointTorLimit,
-                        kReturnRefJointTorLimit);
-
         BalanceTool_PrintRaw("\r\n[balance]\r\n");
 
-        BalanceTool_PrintFloat4Line("L1",
-                                    g_balance_robot.leg[1].rod.l0,
-                                    "dL1",
-                                    g_balance_robot.leg[1].rod.dl0);
+        BalanceTool_PrintFloat4Line("L0",
+                                    g_balance_robot.leg[0].rod.l0,
+                                    "dL0",
+                                    g_balance_robot.leg[0].rod.dl0);
 
         BalanceTool_PrintFloat4Line("phi0_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].rod.phi0),
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].rod.phi0),
                                     "dphi0_dps",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].rod.dphi0));
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].rod.dphi0));
 
         BalanceTool_PrintFloat4Line("phi1_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].joint.phi1),
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi1),
                                     "phi4_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].joint.phi4));
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi4));
 
         BalanceTool_PrintFloat4Line("q0_cont",
                                     q0,
@@ -500,19 +396,24 @@ static void vBalancePrintTask(void *pvParameters)
                                     q1);
 
         BalanceTool_PrintFloat4Line("q0_err",
-                                    BALANCE_JOINT_L0_CONT_REF - q0,
+                                    g_balance_ref_pose.target_cont[0] - q0,
                                     "q1_err",
-                                    BALANCE_JOINT_L1_CONT_REF - q1);
+                                    g_balance_ref_pose.target_cont[1] - q1);
 
-        BalanceTool_PrintFloat4Line("tau0",
-                                    tau0,
-                                    "tau1",
-                                    tau1);
+        BalanceTool_PrintFloat4Line("dq0",
+                                    dq0,
+                                    "dq1",
+                                    dq1);
 
         BalanceTool_PrintFloat4Line("mode",
                                     (g_balance_mode == BAL_APP_MODE_RETURN_REF) ? 0.0f : 1.0f,
-                                    "ret_done",
-                                    g_balance_return_ref_done ? 1.0f : 0.0f);
+                                    "ref_done",
+                                    BalanceRefPose_IsFinished(&g_balance_ref_pose) ? 1.0f : 0.0f);
+
+        BalanceTool_PrintFloat4Line("ref_active",
+                                    BalanceRefPose_IsActive(&g_balance_ref_pose) ? 1.0f : 0.0f,
+                                    "stable",
+                                    (float)g_balance_ref_pose.stable_count);
 
         vTaskDelay(pdMS_TO_TICKS(50));
     }
