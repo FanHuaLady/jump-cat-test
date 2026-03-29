@@ -18,19 +18,15 @@ namespace
 
     // =========================
     // 虚拟杆角度控制参数
-    // 先保守一点，后面慢慢调
     // =========================
     static constexpr float k_leg_ang_kp = 35.0f;
     static constexpr float k_leg_ang_kd = 2.5f;
 
     // =========================
     // 当前第一版目标虚拟杆角度
-    // 先固定为 0
-    // 后面你可以改成：
-    // phi0_ref = k_pitch * (pitch_ref - pitch_now)
     // =========================
-    static constexpr float k_leg_ang_ref = -1.6580f;
-
+    // static constexpr float k_leg_ang_ref = -1.6580f;
+    static constexpr float k_leg_ang_ref = -1.9198f;
     static inline float BalanceClamp(float x, float min_v, float max_v)
     {
         if (x < min_v) return min_v;
@@ -65,6 +61,19 @@ namespace
         cmd->joint_t[0] = 0.0f;
         cmd->joint_t[1] = 0.0f;
         cmd->wheel_t = 0.0f;
+    }
+
+    // =========================
+    // 模型关节力矩 -> 真实电机力矩
+    //
+    // 当前约定：
+    // 1) 左腿模型就是当前标准模型，输出不翻转
+    // 2) 右腿输入角已经通过 SIGN 做了“翻面”
+    //    因此模型输出发回真实右腿电机时，需要再反号
+    // =========================
+    static inline float BalanceMapJointTorqueToMotor(bool is_right_leg, float tau_model)
+    {
+        return is_right_leg ? (-tau_model) : tau_model;
     }
 }
 
@@ -152,7 +161,6 @@ void BalanceController_LegAngle(BalanceRobot* robot)
 
     // =========================
     // 虚拟杆摆角控制：输出 rod_tp
-    // 当前先固定目标角为 0
     // =========================
     for (int i = 0; i < BALANCE_LEG_NUM; ++i)
     {
@@ -163,7 +171,7 @@ void BalanceController_LegAngle(BalanceRobot* robot)
         const float err_phi0 = BalanceTool_AngleDiffRad(phi0_ref, phi0_now);    // 角度误差
 
         // 虚拟杆角度 PD
-        float rod_tp = k_leg_ang_kp * err_phi0 - k_leg_ang_kd * dphi0_now;      // 扭矩输出
+        float rod_tp = k_leg_ang_kp * err_phi0 - k_leg_ang_kd * dphi0_now;
 
         // 保守限幅
         rod_tp = BalanceClamp(rod_tp,
@@ -212,7 +220,7 @@ void BalanceController_Output(BalanceRobot* robot)
         robot->joint_motor_cmd[BAL_JOINT_L_0].pos = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_L_0].vel = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_L_0].tor =
-            BalanceClamp(robot->cmd[0].joint_t[0],
+            BalanceClamp(BalanceMapJointTorqueToMotor(false, robot->cmd[0].joint_t[0]),
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
                           BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_L_0].kp = BALANCE_DEFAULT_JOINT_MIT_KP;
@@ -222,7 +230,7 @@ void BalanceController_Output(BalanceRobot* robot)
         robot->joint_motor_cmd[BAL_JOINT_L_1].pos = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_L_1].vel = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_L_1].tor =
-            BalanceClamp(robot->cmd[0].joint_t[1],
+            BalanceClamp(BalanceMapJointTorqueToMotor(false, robot->cmd[0].joint_t[1]),
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
                           BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_L_1].kp = BALANCE_DEFAULT_JOINT_MIT_KP;
@@ -232,6 +240,8 @@ void BalanceController_Output(BalanceRobot* robot)
 
     // =========================
     // 右腿
+    // 右腿输入已经按“左腿视角”做了翻面
+    // 所以这里模型输出回真实右腿电机时，需要再反号
     // =========================
     {
         float J[2][2] = {{0.0f, 0.0f}, {0.0f, 0.0f}};
@@ -245,7 +255,7 @@ void BalanceController_Output(BalanceRobot* robot)
         robot->joint_motor_cmd[BAL_JOINT_R_0].pos = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_R_0].vel = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_R_0].tor =
-            BalanceClamp(robot->cmd[1].joint_t[0],
+            BalanceClamp(BalanceMapJointTorqueToMotor(true, robot->cmd[1].joint_t[0]),
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
                           BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_R_0].kp = BALANCE_DEFAULT_JOINT_MIT_KP;
@@ -255,7 +265,7 @@ void BalanceController_Output(BalanceRobot* robot)
         robot->joint_motor_cmd[BAL_JOINT_R_1].pos = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_R_1].vel = 0.0f;
         robot->joint_motor_cmd[BAL_JOINT_R_1].tor =
-            BalanceClamp(robot->cmd[1].joint_t[1],
+            BalanceClamp(BalanceMapJointTorqueToMotor(true, robot->cmd[1].joint_t[1]),
                          -BALANCE_DEFAULT_JOINT_TORQUE_LIMIT,
                           BALANCE_DEFAULT_JOINT_TORQUE_LIMIT);
         robot->joint_motor_cmd[BAL_JOINT_R_1].kp = BALANCE_DEFAULT_JOINT_MIT_KP;

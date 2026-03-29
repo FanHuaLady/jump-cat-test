@@ -211,8 +211,10 @@ void BalanceApp_Init(void)
 // =====================================================
 static void BalanceApp_StartReturnToRef(void)
 {
-    BalanceRefPose_Start(&g_balance_ref_pose);
-    g_balance_mode = BALANCE_REF_POSE_MODE_RIGHT_ONLY;
+    const BalanceRefPoseMode ref_mode = BALANCE_REF_POSE_MODE_RIGHT_ONLY;
+
+    BalanceRefPose_StartWithMode(&g_balance_ref_pose, ref_mode);
+    g_balance_mode = BAL_APP_MODE_RETURN_REF;
 }
 
 static void BalanceApp_SwitchToNormalMode(void)
@@ -368,27 +370,27 @@ static void vBalancePrintTask(void *pvParameters)
 
     for (;;)
     {
-        const float q0 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_0].continuous;
-        const float q1 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_L_1].continuous;
-        const float dq0 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_0].vel;
-        const float dq1 = g_balance_robot.joint_motor_fdb[BAL_JOINT_L_1].vel;
+        const float q0 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_R_0].continuous;
+        const float q1 = g_balance_robot.joint_angle_unwrap[BAL_JOINT_R_1].continuous;
+        const float dq0 = g_balance_robot.joint_motor_fdb[BAL_JOINT_R_0].vel;
+        const float dq1 = g_balance_robot.joint_motor_fdb[BAL_JOINT_R_1].vel;
 
         BalanceTool_PrintRaw("\r\n[balance]\r\n");
 
         BalanceTool_PrintFloat4Line("L0",
-                                    g_balance_robot.leg[0].rod.l0,
+                                    g_balance_robot.leg[1].rod.l0,
                                     "dL0",
-                                    g_balance_robot.leg[0].rod.dl0);
+                                    g_balance_robot.leg[1].rod.dl0);
 
         BalanceTool_PrintFloat4Line("phi0_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].rod.phi0),
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].rod.phi0),
                                     "dphi0_dps",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].rod.dphi0));
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].rod.dphi0));
 
         BalanceTool_PrintFloat4Line("phi1_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi1),
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].joint.phi1),
                                     "phi4_deg",
-                                    BalanceTool_RadToDeg(g_balance_robot.leg[0].joint.phi4));
+                                    BalanceTool_RadToDeg(g_balance_robot.leg[1].joint.phi4));
 
         BalanceTool_PrintFloat4Line("q0_cont",
                                     q0,
@@ -396,9 +398,9 @@ static void vBalancePrintTask(void *pvParameters)
                                     q1);
 
         BalanceTool_PrintFloat4Line("q0_err",
-                                    g_balance_ref_pose.target_cont[0] - q0,
+                                    g_balance_ref_pose.target_cont[2] - q0,
                                     "q1_err",
-                                    g_balance_ref_pose.target_cont[1] - q1);
+                                    g_balance_ref_pose.target_cont[3] - q1);
 
         BalanceTool_PrintFloat4Line("dq0",
                                     dq0,

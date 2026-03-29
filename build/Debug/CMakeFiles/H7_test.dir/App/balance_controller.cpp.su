@@ -1,9 +1,10 @@
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:34:25:float {anonymous}::BalanceClamp(float, float, float)	24	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:41:24:void {anonymous}::BalanceClearMotorCmd(BalanceMotorCmd*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:56:24:void {anonymous}::BalanceClearLegCmd(BalanceLegCmd*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:71:6:void BalanceController_Init(BalanceRobot*)	32	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:96:6:void BalanceController_SetRef(BalanceRobot*)	16	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:115:6:void BalanceController_LegLength(BalanceRobot*)	40	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:146:6:void BalanceController_LegAngle(BalanceRobot*)	40	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:181:6:void BalanceController_Output(BalanceRobot*)	56	static
-E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:284:6:void BalanceController_Stop(BalanceRobot*)	32	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:30:25:float {anonymous}::BalanceClamp(float, float, float)	24	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:37:24:void {anonymous}::BalanceClearMotorCmd(BalanceMotorCmd*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:52:24:void {anonymous}::BalanceClearLegCmd(BalanceLegCmd*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:74:25:float {anonymous}::BalanceMapJointTorqueToMotor(bool, float)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:80:6:void BalanceController_Init(BalanceRobot*)	32	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:105:6:void BalanceController_SetRef(BalanceRobot*)	16	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:124:6:void BalanceController_LegLength(BalanceRobot*)	40	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:155:6:void BalanceController_LegAngle(BalanceRobot*)	40	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:189:6:void BalanceController_Output(BalanceRobot*)	56	static
+E:/04_resource/03_DM02_MOTOR_MIT_N/03_DM02_MOTOR_MIT_N/App/balance_controller.cpp:294:6:void BalanceController_Stop(BalanceRobot*)	32	static
