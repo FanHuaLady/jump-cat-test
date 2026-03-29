@@ -5,6 +5,10 @@
 extern "C" {
 #endif
 
+// 电机ID定义
+#define MOTOR_X   0     // 水平电机
+#define MOTOR_Y   1     // 竖直电机
+
 
 #define MOTOR_DM_X_MasterID     0x11        // CAN_Rx_ID
 #define MOTOR_DM_X_CANID        0x10        // CAN_Tx_ID
@@ -24,7 +28,7 @@ extern "C" {
 #define MOTOR_X_KD_MAX     10.0f
 #define MOTOR_X_POS_MIN    0.0f
 #define MOTOR_X_POS_MAX    3.14f      // π rad，约180°
-#define MOTOR_X_VEL_MIN    0.0f
+#define MOTOR_X_VEL_MIN   -5.0f
 #define MOTOR_X_VEL_MAX    5.0f       // 约300°/s
 #define MOTOR_X_TOR_MIN    0.0f
 #define MOTOR_X_TOR_MAX    10.0f
@@ -36,7 +40,7 @@ extern "C" {
 #define MOTOR_Y_KD_MAX     10.0f
 #define MOTOR_Y_POS_MIN    0.0f
 #define MOTOR_Y_POS_MAX    3.14f      // π rad，约180°
-#define MOTOR_Y_VEL_MIN    0.0f
+#define MOTOR_Y_VEL_MIN   -5.0f
 #define MOTOR_Y_VEL_MAX    5.0f       // 约300°/s
 #define MOTOR_Y_TOR_MIN    0.0f
 #define MOTOR_Y_TOR_MAX    10.0f

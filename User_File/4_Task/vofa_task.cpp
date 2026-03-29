@@ -26,15 +26,25 @@ extern void Set_Target_Yaw(float yaw_deg);
 extern void Set_Target_Pitch(float pitch_deg);
 extern void Set_Target_Roll(float roll_deg);
 
+// 设置 PID 参数(角度误差转换为目标速度的参数)
+extern void Set_Angle_PID_Kp(float kp);
+extern void Set_Angle_PID_Ki(float ki);
+extern void Set_Angle_PID_Kd(float kd);
+
+// vofa查看PID参数(角度误差转换为目标速度的参数)
+extern float Test_Get_PID_Kp(void);
+extern float Test_Get_PID_Ki(void);
+extern float Test_Get_PID_Kd(void);
+
 // VOFA显示接口（目标角度）
 extern float Test_Get_Target_Yaw(void);
 extern float Test_Get_Target_Pitch(void);
 extern float Test_Get_Target_Roll(void);
 
-// VOFA显示接口（当前角度）
-extern float Test_Get_Current_Yaw(void);
-extern float Test_Get_Current_Pitch(void);
-extern float Test_Get_Current_Roll(void);
+// // VOFA显示接口（当前角度）
+// extern float Test_Get_Current_Yaw(void);
+// extern float Test_Get_Current_Pitch(void);
+// extern float Test_Get_Current_Roll(void);
 
 // VOFA显示接口（角度误差）
 extern float Test_Get_Error_Yaw(void);
@@ -49,7 +59,11 @@ static char Vofa_Variable_List[][VOFA_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH] =
 {
     {"yaw"},
     {"pitch"},
-    {"roll"}
+    {"roll"},
+    {"kp"},
+    {"ki"},
+    {"kd"},
+
 };
 
 // ========== 静态函数声明 ==========
@@ -59,42 +73,40 @@ static void vVofaCmdTask(void *pvParameters);
 // ========== VOFA发送任务 ==========
 static void vVofaSendTask(void *pvParameters)
 {
-    AttitudeData_t imu_data;
-    float yaw, pitch, roll;
-    float target_yaw, target_pitch, target_roll;
-    float current_yaw, current_pitch, current_roll;
-    float error_yaw, error_pitch, error_roll;
-    
     for(;;)
     {
         vTaskDelay(pdMS_TO_TICKS(20));
         
+        AttitudeData_t imu_data;
+        
         if (xQueuePeek(xIMUDataQueue, &imu_data, 0) == pdTRUE)
         {
             // JY61P原始数据
-            yaw = imu_data.yaw;
-            pitch = imu_data.pitch;
-            roll = imu_data.roll;
+            float yaw = imu_data.yaw;
+            float pitch = imu_data.pitch;
+            float roll = imu_data.roll;
             
             // 从 set_angle_test_task 获取数据
-            target_yaw = Test_Get_Target_Yaw();
-            target_pitch = Test_Get_Target_Pitch();
-            target_roll = Test_Get_Target_Roll();
+            float target_yaw = Test_Get_Target_Yaw();
+            float target_pitch = Test_Get_Target_Pitch();
+            float target_roll = Test_Get_Target_Roll();
             
-            current_yaw = Test_Get_Current_Yaw();
-            current_pitch = Test_Get_Current_Pitch();
-            current_roll = Test_Get_Current_Roll();
+            // 从 set_angle_test_task 获取角度误差
+            float error_yaw = Test_Get_Error_Yaw();
+            float error_pitch = Test_Get_Error_Pitch();
+            float error_roll = Test_Get_Error_Roll();
             
-            error_yaw = Test_Get_Error_Yaw();
-            error_pitch = Test_Get_Error_Pitch();
-            error_roll = Test_Get_Error_Roll();
+            // PID 参数
+            float kp = Test_Get_PID_Kp();
+            float ki = Test_Get_PID_Ki();
+            float kd = Test_Get_PID_Kd();
             
-            // 发送12个数据
+            // 发送JustFloat模式数据
             Vofa_UART.Set_Data(12, 
                                &yaw, &pitch, &roll,
                                &target_yaw, &target_pitch, &target_roll,
-                               &current_yaw, &current_pitch, &current_roll,
-                               &error_yaw, &error_pitch, &error_roll);
+                               &error_yaw, &error_pitch, &error_roll,
+                               &kp, &ki, &kd);
             
             Vofa_UART.TIM_1ms_Write_PeriodElapsedCallback();
         }
@@ -112,14 +124,23 @@ static void vVofaCmdTask(void *pvParameters)
         {
             switch (cmd.index)
             {
-            case 0:
+            case 0:     // 目标yaw角
                 Set_Target_Yaw(cmd.value);
                 break;
-            case 1:
+            case 1:     // 目标pitch角
                 Set_Target_Pitch(cmd.value);
                 break;
-            case 2:
+            case 2:     // 目标roll角
                 Set_Target_Roll(cmd.value);
+                break;
+            case 3:     // 误差转为目标速度的kp
+                Set_Angle_PID_Kp(cmd.value);
+                break;
+            case 4:     // 误差转为目标速度的ki
+                Set_Angle_PID_Ki(cmd.value);
+                break;
+            case 5:     // 误差转为目标速度的kd
+                Set_Angle_PID_Kd(cmd.value);
                 break;
             default:
                 break;

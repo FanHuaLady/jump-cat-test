@@ -1,5 +1,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
+#include "queue.h"
 
 #include "motor_dm_task.h"
 #include "dvc_motor_dm.h"
@@ -12,6 +13,50 @@ Class_Motor_DM_Normal motor_dm_y;   // 竖直的电机
 // 任务句柄
 static TaskHandle_t xMotorDMTaskHandle = NULL;
 
+
+// 速度队列句柄
+static QueueHandle_t xSpeedQueueYaw = NULL;
+static QueueHandle_t xSpeedQueuePitch = NULL;
+
+// 初始化队列
+void Motor_DM_Init_Queue(void)
+{
+    // 队列长度为1，只保留最新速度
+    xSpeedQueueYaw = xQueueCreate(1, sizeof(float));
+    xSpeedQueuePitch = xQueueCreate(1, sizeof(float));
+}
+
+// 设置电机速度（由 set_angle_task 调用）
+void Motor_DM_Set_Speed(uint8_t motor_id, float speed_rad_s)
+{
+    if (motor_id == MOTOR_X && xSpeedQueueYaw != NULL)
+    {
+        // 覆盖写入，只保留最新值
+        xQueueOverwrite(xSpeedQueueYaw, &speed_rad_s);
+    }
+    else if (motor_id == MOTOR_Y && xSpeedQueuePitch != NULL)
+    {
+        xQueueOverwrite(xSpeedQueuePitch, &speed_rad_s);
+    }
+}
+
+// 读取最新速度（内部使用，在 Motor_DM_Test_Apply 中调用）
+static float Motor_DM_Get_Speed(uint8_t motor_id)
+{
+    float speed = 0.0f;
+    
+    if (motor_id == MOTOR_X && xSpeedQueueYaw != NULL)
+    {
+        // 非阻塞读取
+        xQueuePeek(xSpeedQueueYaw, &speed, 0);
+    }
+    else if (motor_id == MOTOR_Y && xSpeedQueuePitch != NULL)
+    {
+        xQueuePeek(xSpeedQueuePitch, &speed, 0);
+    }
+    
+    return speed;
+}
 
 void CAN1_Callback(FDCAN_RxHeaderTypeDef &Header, uint8_t *Buffer)
 {
@@ -53,13 +98,13 @@ void Motor_DM_Test_Init(void)
     motor_dm_x.Set_Control_Omega(0.0f);
     motor_dm_x.Set_Control_Torque(0.0f);
     motor_dm_x.Set_K_P(0.0f);
-    motor_dm_x.Set_K_D(0.0f);
+    motor_dm_x.Set_K_D(0.5f);
 
     motor_dm_y.Set_Control_Angle(0.0f);
     motor_dm_y.Set_Control_Omega(0.0f);
     motor_dm_y.Set_Control_Torque(0.0f);
     motor_dm_y.Set_K_P(0.0f);
-    motor_dm_y.Set_K_D(0.0f);
+    motor_dm_y.Set_K_D(0.5f);
 
     motor_dm_x.CAN_Send_Enter();
     motor_dm_y.CAN_Send_Enter();
@@ -69,20 +114,23 @@ void Motor_DM_Test_Init(void)
 void Motor_DM_Test_Apply(void)
 {
 
+        // 从队列读取最新速度
+    static float g_target_vel_x = 0.0f;
+    static float g_target_vel_y = 0.0f;
     
-    static float g_target_kp_x  = 1.0f;     // kp值
+    static float g_target_kp_x  = 0.0f;     // kp值
     static float g_target_kd_x  = 0.5f;     // kd值
     static float g_target_pos_x = 0.0f;     // 设定的目标位置
-    static float g_target_vel_x = 0.0f;     // 设定的目标速度
     static float g_target_tor_x = 0.0f;     // 设定的前馈力矩
 
-    static float g_target_kp_y  = 1.5f;
+    static float g_target_kp_y  = 0.0f;
     static float g_target_kd_y  = 0.5f;
     static float g_target_pos_y = 0.0f;
-    static float g_target_vel_y = 0.0f;   
     static float g_target_tor_y = 0.0f;
 
-
+    // 从队列中读取最新目标速度
+    g_target_vel_x = Motor_DM_Get_Speed(MOTOR_X);
+    g_target_vel_y = Motor_DM_Get_Speed(MOTOR_Y);
 
     // 水平电机参数限幅
     const float cmd_kp_x  = Basic_Math_Constrain(g_target_kp_x,  MOTOR_X_KP_MIN,  MOTOR_X_KP_MAX);
@@ -181,6 +229,7 @@ static void vMotorDMTask(void *pvParameters)
 
 void MOTOR_DM_Task_Create(void)
 {
+    Motor_DM_Init_Queue();
     BaseType_t ret = xTaskCreate(vMotorDMTask,          // 任务函数
                                  "vMotorDMTask",        // 任务名称
                                  512,                  // 栈大小（字）

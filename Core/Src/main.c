@@ -155,7 +155,7 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim5);
   WS2812_Task_Create();
   // Control_Task_Create();
-  // MOTOR_DM_Task_Create();
+  MOTOR_DM_Task_Create();
   JY61P_Task_Create();
   Vofa_Task_Create();
   Set_Angle_Task_Create();
