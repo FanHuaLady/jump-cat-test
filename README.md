@@ -5,6 +5,37 @@
 达妙DM-J4310-2EC电机，达妙H7开发板，JY61P模块
 
 功能：最终要实现云台自稳定
+
+## 项目使用
+
+使用vscode中编写，使用CMake生成构建系统，ninja生成构建项目
+前提是需要安装 `CMake`、`ARM GCC 工具链`、`Ninja`等工具
+
+```powershell
+# 1. 回到根目录
+cd E:\Github_warehouse\JumpCat_Gimbal\FreeRTOS_Project
+
+# 2. 清理旧的 build
+Remove-Item build -Recurse -Force -ErrorAction SilentlyContinue
+
+# 3. 用 Debug 预设配置
+cmake --preset Debug
+
+# 4. 注意！进入正确的目录：build/Debug
+cd build/Debug
+
+# 5. 编译
+ninja
+
+
+# 或者一键编译烧录(快捷键)
+Crtl + Shift + B
+```
+
+
+
+
+
 ## 项目简介介绍
 
 ```tex
