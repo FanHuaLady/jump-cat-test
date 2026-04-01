@@ -1,6 +1,5 @@
 #include "axis_control.h"
 
-
 // ========== 构造函数 ==========
 
 AxisControl::AxisControl()
@@ -9,18 +8,23 @@ AxisControl::AxisControl()
     , output_limit_(0.0f)
     , target_angle_(0.0f)
     , current_angle_(0.0f)
-    , error_(0.0f)
-    , kp_(0.0f)
-    , ki_(0.0f)
-    , kd_(0.0f)
+    , angle_error_(0.0f)
+    , kp_angle_(0.0f)
+    , ki_angle_(0.0f)
+    , kd_angle_(0.0f)
+    , target_speed_(0.0f)
+    , current_speed_(0.0f)
+    , speed_error_(0.0f)
+    , kp_speed_(0.0f)
+    , ki_speed_(0.0f)
+    , kd_speed_(0.0f)
     , mutex_(NULL)
     , initialized_(false)
 {
-    // 创建互斥锁
     mutex_ = xSemaphoreCreateMutex();
     if (mutex_ == NULL) 
     {
-        while(1);  // 创建失败，死循环
+        while(1);
     }
 }
 
@@ -30,20 +34,24 @@ AxisControl::AxisControl(uint8_t motor_id, float control_period_sec, float outpu
     , output_limit_(output_limit)
     , target_angle_(0.0f)
     , current_angle_(0.0f)
-    , error_(0.0f)
-    , kp_(0.0f)
-    , ki_(0.0f)
-    , kd_(0.0f)
+    , angle_error_(0.0f)
+    , kp_angle_(0.0f)
+    , ki_angle_(0.0f)
+    , kd_angle_(0.0f)
+    , target_speed_(0.0f)
+    , current_speed_(0.0f)
+    , speed_error_(0.0f)
+    , kp_speed_(0.0f)
+    , ki_speed_(0.0f)
+    , kd_speed_(0.0f)
     , initialized_(false)
 {
-    // 创建互斥锁
     mutex_ = xSemaphoreCreateMutex();
     if (mutex_ == NULL) 
     {
         while(1);
     }
     
-    // 自动初始化
     Init(motor_id, control_period_sec, output_limit);
 }
 
@@ -55,21 +63,28 @@ AxisControl::~AxisControl()
     }
 }
 
-// ========== 初始化函数 ==========
+// ========== 初始化 ==========
 
 void AxisControl::Init(uint8_t motor_id, float control_period_sec, float output_limit) 
 {
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    
     motor_id_ = motor_id;
     control_period_sec_ = control_period_sec;
     output_limit_ = output_limit;
     
-    // 初始化PID（使用当前参数，默认为0）
-    pid_.Init(kp_, ki_, kd_, 0.0f, 0.0f, output_limit_, control_period_sec_);
+    // 初始化角度环PID
+    pid_angle_.Init(kp_angle_, ki_angle_, kd_angle_, 0.0f, 0.0f, output_limit_, control_period_sec_);
+    
+    // 初始化速度环PID
+    pid_speed_.Init(kp_speed_, ki_speed_, kd_speed_, 0.0f, 0.0f, output_limit_, control_period_sec_);
     
     initialized_ = true;
+    
+    xSemaphoreGive(mutex_);
 }
 
-// ========== 角度设置和读取 ==========
+// ========== 位置控制相关 ==========
 
 void AxisControl::SetTargetAngle(float angle_deg) 
 {
@@ -111,34 +126,149 @@ float AxisControl::GetCurrentAngle() const
     return value;
 }
 
-float AxisControl::GetError() const 
+float AxisControl::GetAngleError() const 
 {
     if (!initialized_) return 0.0f;
     
     float value;
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    value = error_;
+    value = angle_error_;
     xSemaphoreGive(mutex_);
     return value;
 }
 
-// ========== PID参数设置和读取 ==========
+float AxisControl::CalculateAngleOutput() 
+{
+    if (!initialized_) return 0.0f;
+    
+    float target, current, output;
+    
+    // 读取目标角度和当前角度
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    target = target_angle_;
+    current = current_angle_;
+    xSemaphoreGive(mutex_);
+    
+    // 计算归一化角度误差
+    float error = NormalizeAngleError(target, current);
+    
+    // 更新误差（供外部读取）
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    angle_error_ = error;
+    xSemaphoreGive(mutex_);
+    
+    // PID计算
+    pid_angle_.Set_Target(0.0f);
+    pid_angle_.Set_Now(error);
+    pid_angle_.TIM_Calculate_PeriodElapsedCallback();
+    output = -pid_angle_.Get_Out();  // 负号根据实际系统调整
+    
+    return output;
+}
 
-void AxisControl::SetPIDParams(float kp, float ki, float kd) 
+// ========== 速度控制相关 ==========
+
+void AxisControl::SetTargetSpeed(float speed_dps) 
 {
     if (!initialized_) return;
     
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    kp_ = kp;
-    ki_ = ki;
-    kd_ = kd;
-    pid_.Set_K_P(kp);
-    pid_.Set_K_I(ki);
-    pid_.Set_K_D(kd);
+    target_speed_ = speed_dps;
     xSemaphoreGive(mutex_);
 }
 
-void AxisControl::GetPIDParams(float &kp, float &ki, float &kd) const 
+float AxisControl::GetTargetSpeed() const 
+{
+    if (!initialized_) return 0.0f;
+    
+    float value;
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    value = target_speed_;
+    xSemaphoreGive(mutex_);
+    return value;
+}
+
+void AxisControl::SetCurrentSpeed(float speed_dps) 
+{
+    if (!initialized_) return;
+    
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    current_speed_ = speed_dps;
+    xSemaphoreGive(mutex_);
+}
+
+float AxisControl::GetCurrentSpeed() const 
+{
+    if (!initialized_) return 0.0f;
+    
+    float value;
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    value = current_speed_;
+    xSemaphoreGive(mutex_);
+    return value;
+}
+
+float AxisControl::GetSpeedError() const 
+{
+    if (!initialized_) return 0.0f;
+    
+    float value;
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    value = speed_error_;
+    xSemaphoreGive(mutex_);
+    return value;
+}
+
+float AxisControl::CalculateSpeedOutput() 
+{
+    if (!initialized_) return 0.0f;
+    
+    float target, current, output;
+    
+    // 读取目标速度和当前速度
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    target = target_speed_;
+    current = current_speed_;
+    xSemaphoreGive(mutex_);
+    
+    // 计算速度误差
+    float error = target - current;
+    
+    // 更新速度误差（供外部读取）
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    speed_error_ = error;
+    xSemaphoreGive(mutex_);
+    
+    // PID计算
+    pid_speed_.Set_Target(0.0f);
+    pid_speed_.Set_Now(error);
+    pid_speed_.TIM_Calculate_PeriodElapsedCallback();
+    output = pid_speed_.Get_Out();
+    
+    // 限幅
+    if (output > output_limit_) output = output_limit_;
+    if (output < -output_limit_) output = -output_limit_;
+    
+    return output;
+}
+
+// ========== 角度环PID参数 ==========
+
+void AxisControl::SetAnglePID(float kp, float ki, float kd) 
+{
+    if (!initialized_) return;
+    
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    kp_angle_ = kp;
+    ki_angle_ = ki;
+    kd_angle_ = kd;
+    pid_angle_.Set_K_P(kp);
+    pid_angle_.Set_K_I(ki);
+    pid_angle_.Set_K_D(kd);
+    xSemaphoreGive(mutex_);
+}
+
+void AxisControl::GetAnglePID(float &kp, float &ki, float &kd) const 
 {
     if (!initialized_) 
     {
@@ -147,120 +277,181 @@ void AxisControl::GetPIDParams(float &kp, float &ki, float &kd) const
     }
     
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    kp = kp_;
-    ki = ki_;
-    kd = kd_;
+    kp = kp_angle_;
+    ki = ki_angle_;
+    kd = kd_angle_;
     xSemaphoreGive(mutex_);
 }
 
-void AxisControl::SetKp(float kp) 
+void AxisControl::SetAngleKp(float kp) 
 {
     if (!initialized_) return;
     
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    kp_ = kp;
-    pid_.Set_K_P(kp);
+    kp_angle_ = kp;
+    pid_angle_.Set_K_P(kp);
     xSemaphoreGive(mutex_);
 }
 
-void AxisControl::SetKi(float ki) 
+void AxisControl::SetAngleKi(float ki) 
 {
     if (!initialized_) return;
     
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    ki_ = ki;
-    pid_.Set_K_I(ki);
+    ki_angle_ = ki;
+    pid_angle_.Set_K_I(ki);
     xSemaphoreGive(mutex_);
 }
 
-void AxisControl::SetKd(float kd) 
+void AxisControl::SetAngleKd(float kd) 
 {
     if (!initialized_) return;
     
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    kd_ = kd;
-    pid_.Set_K_D(kd);
+    kd_angle_ = kd;
+    pid_angle_.Set_K_D(kd);
     xSemaphoreGive(mutex_);
 }
 
-float AxisControl::GetKp() const 
+float AxisControl::GetAngleKp() const 
 {
     if (!initialized_) return 0.0f;
     
     float value;
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    value = kp_;
+    value = kp_angle_;
     xSemaphoreGive(mutex_);
     return value;
 }
 
-float AxisControl::GetKi() const 
+float AxisControl::GetAngleKi() const 
 {
     if (!initialized_) return 0.0f;
     
     float value;
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    value = ki_;
+    value = ki_angle_;
     xSemaphoreGive(mutex_);
     return value;
 }
 
-float AxisControl::GetKd() const 
+float AxisControl::GetAngleKd() const 
 {
     if (!initialized_) return 0.0f;
     
     float value;
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    value = kd_;
+    value = kd_angle_;
     xSemaphoreGive(mutex_);
     return value;
 }
 
-// ========== 控制计算 ==========
+// ========== 速度环PID参数 ==========
 
-float AxisControl::CalculateOutput() 
+void AxisControl::SetSpeedPID(float kp, float ki, float kd) 
+{
+    if (!initialized_) return;
+    
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    kp_speed_ = kp;
+    ki_speed_ = ki;
+    kd_speed_ = kd;
+    pid_speed_.Set_K_P(kp);
+    pid_speed_.Set_K_I(ki);
+    pid_speed_.Set_K_D(kd);
+    xSemaphoreGive(mutex_);
+}
+
+void AxisControl::GetSpeedPID(float &kp, float &ki, float &kd) const 
+{
+    if (!initialized_) 
+    {
+        kp = ki = kd = 0.0f;
+        return;
+    }
+    
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    kp = kp_speed_;
+    ki = ki_speed_;
+    kd = kd_speed_;
+    xSemaphoreGive(mutex_);
+}
+
+void AxisControl::SetSpeedKp(float kp) 
+{
+    if (!initialized_) return;
+    
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    kp_speed_ = kp;
+    pid_speed_.Set_K_P(kp);
+    xSemaphoreGive(mutex_);
+}
+
+void AxisControl::SetSpeedKi(float ki) 
+{
+    if (!initialized_) return;
+    
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    ki_speed_ = ki;
+    pid_speed_.Set_K_I(ki);
+    xSemaphoreGive(mutex_);
+}
+
+void AxisControl::SetSpeedKd(float kd) 
+{
+    if (!initialized_) return;
+    
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    kd_speed_ = kd;
+    pid_speed_.Set_K_D(kd);
+    xSemaphoreGive(mutex_);
+}
+
+float AxisControl::GetSpeedKp() const 
 {
     if (!initialized_) return 0.0f;
     
-    float target, current, output;
-    
-    // 读取当前目标角度和实际角度
+    float value;
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    target = target_angle_;
-    current = current_angle_;
+    value = kp_speed_;
     xSemaphoreGive(mutex_);
-    
-    // 计算归一化误差
-    float error = NormalizeAngleError(target, current);
-    
-    // 更新误差（供外部读取）
-    xSemaphoreTake(mutex_, portMAX_DELAY);
-    error_ = error;
-    xSemaphoreGive(mutex_);
-    
-    // PID计算
-    pid_.Set_Target(0.0f);
-    pid_.Set_Now(error);
-    pid_.TIM_Calculate_PeriodElapsedCallback();
-    output = -pid_.Get_Out();  // 负号根据实际系统调整
-    
-    return output;
+    return value;
 }
+
+float AxisControl::GetSpeedKi() const 
+{
+    if (!initialized_) return 0.0f;
+    
+    float value;
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    value = ki_speed_;
+    xSemaphoreGive(mutex_);
+    return value;
+}
+
+float AxisControl::GetSpeedKd() const 
+{
+    if (!initialized_) return 0.0f;
+    
+    float value;
+    xSemaphoreTake(mutex_, portMAX_DELAY);
+    value = kd_speed_;
+    xSemaphoreGive(mutex_);
+    return value;
+}
+
+// ========== 通用接口 ==========
 
 void AxisControl::Reset() 
 {
     if (!initialized_) return;
     
     xSemaphoreTake(mutex_, portMAX_DELAY);
-    error_ = 0.0f;
-    pid_.Set_Integral_Error(0.0f);
+    angle_error_ = 0.0f;
+    speed_error_ = 0.0f;
+    pid_angle_.Set_Integral_Error(0.0f);
+    pid_speed_.Set_Integral_Error(0.0f);
     xSemaphoreGive(mutex_);
-}
-
-bool AxisControl::IsEnabled(float enable_threshold) const 
-{
-    // 这个函数需要外部使能标志，暂时返回true
-    return initialized_;
 }
 
 // ========== 内部辅助函数 ==========
@@ -269,7 +460,6 @@ float AxisControl::NormalizeAngleError(float target, float current)
 {
     float error = target - current;
     
-    // 归一化到 [-180, 180]
     if (error > 180.0f) 
     {
         error -= 360.0f;

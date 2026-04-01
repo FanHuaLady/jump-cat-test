@@ -109,69 +109,69 @@ void Set_Target_Roll(float roll_deg)
 }
 
 // ========== 外部接口（VOFA写入 PID 参数）==========
-// Yaw轴 PID 参数设置
+// Yaw轴 PID 参数设置（角度环）
 void Set_Angle_PID_Kp_X(float kp)
 {
-    axisYaw.SetKp(kp);
+    axisYaw.SetAngleKp(kp);     
 }
 
 void Set_Angle_PID_Ki_X(float ki)
 {
-    axisYaw.SetKi(ki);
+    axisYaw.SetAngleKi(ki);      
 }
 
 void Set_Angle_PID_Kd_X(float kd)
 {
-    axisYaw.SetKd(kd);
+    axisYaw.SetAngleKd(kd);      
 }
 
-// Roll轴 PID 参数设置（注意：原来的Y轴对应roll角）
+// Roll轴 PID 参数设置（角度环）
 void Set_Angle_PID_Kp_Y(float kp)
 {
-    axisRoll.SetKp(kp);
+    axisRoll.SetAngleKp(kp);    
 }
 
 void Set_Angle_PID_Ki_Y(float ki)
 {
-    axisRoll.SetKi(ki);
+    axisRoll.SetAngleKi(ki);     
 }
 
 void Set_Angle_PID_Kd_Y(float kd)
 {
-    axisRoll.SetKd(kd);
+    axisRoll.SetAngleKd(kd);     
 }
 
 // ========== 测试外部接口（供VOFA读取 PID 参数）==========
-// Yaw轴 PID 参数读取
+// Yaw轴 PID 参数读取（角度环）
 float Test_Get_PID_Kp_X(void)
 {
-    return axisYaw.GetKp();
+    return axisYaw.GetAngleKp();  
 }
 
 float Test_Get_PID_Ki_X(void)
 {
-    return axisYaw.GetKi();
+    return axisYaw.GetAngleKi();   
 }
 
 float Test_Get_PID_Kd_X(void)
 {
-    return axisYaw.GetKd();
+    return axisYaw.GetAngleKd();   
 }
 
-// Roll轴 PID 参数读取
+// Roll轴 PID 参数读取（角度环）
 float Test_Get_PID_Kp_Y(void)
 {
-    return axisRoll.GetKp();
+    return axisRoll.GetAngleKp();  
 }
 
 float Test_Get_PID_Ki_Y(void)
 {
-    return axisRoll.GetKi();
+    return axisRoll.GetAngleKi(); 
 }
 
 float Test_Get_PID_Kd_Y(void)
 {
-    return axisRoll.GetKd();
+    return axisRoll.GetAngleKd(); 
 }
 
 // ========== 测试外部接口（供VOFA读取目标角度）==========
@@ -225,7 +225,6 @@ static void Get_Current_Angles(float *yaw, float *pitch, float *roll)
     *yaw = last_yaw;
     *pitch = last_pitch;
     *roll = last_roll;
-    
 }
 
 // ========== 任务函数 ==========
@@ -235,7 +234,6 @@ static void vSetAngleTask(void *pvParameters)
     
     float local_yaw, local_pitch, local_roll;
 
-    
     for(;;)
     {
         // 获取当前角度
@@ -247,9 +245,9 @@ static void vSetAngleTask(void *pvParameters)
         axisPitch.SetCurrentAngle(local_pitch);  // Pitch轴只记录，不控制电机
         
         // 更新测试误差（供VOFA读取）
-        test_error_yaw = axisYaw.GetError();
-        test_error_pitch = axisPitch.GetError();
-        test_error_roll = axisRoll.GetError();
+        test_error_yaw = axisYaw.GetAngleError();   
+        test_error_pitch = axisPitch.GetAngleError(); 
+        test_error_roll = axisRoll.GetAngleError();   
         
         // 检查使能标志
         bool en_flag = Get_Control_Enable_IN();
@@ -257,17 +255,17 @@ static void vSetAngleTask(void *pvParameters)
         if(en_flag)
         {
             // Yaw轴控制（水平电机）
-            float output_speed_dps_yaw = axisYaw.CalculateOutput();
+            float output_speed_dps_yaw = axisYaw.CalculateAngleOutput();  
             float output_speed_rad_s_yaw = output_speed_dps_yaw * BASIC_MATH_DEG_TO_RAD;
             Motor_DM_Set_Speed(MOTOR_X, output_speed_rad_s_yaw);
             
             // Roll轴控制（竖直电机，使用roll角）
-            float output_speed_dps_roll = axisRoll.CalculateOutput();
+            float output_speed_dps_roll = axisRoll.CalculateAngleOutput(); 
             float output_speed_rad_s_roll = output_speed_dps_roll * BASIC_MATH_DEG_TO_RAD;
             Motor_DM_Set_Speed(MOTOR_Y, output_speed_rad_s_roll);
             
             // Pitch轴只计算误差，不控制电机（只记录）
-            axisPitch.CalculateOutput();  
+            axisPitch.CalculateAngleOutput();   
             
         } else {
             // 停止电机
@@ -300,14 +298,14 @@ void Set_Angle_Task_Create(void)
     axisPitch.Init(MOTOR_NONE, 0.1f, 200.0f);
     
     // ========== 设置初始 PID 参数 ==========
-    // Yaw轴 PID 参数
-    axisYaw.SetPIDParams(7.0f, 0.0f, 0.5f);
+    // Yaw轴 PID 参数（角度环）
+    axisYaw.SetAnglePID(7.0f, 0.0f, 0.5f);  
     
-    // Roll轴 PID 参数
-    axisRoll.SetPIDParams(7.0f, 0.0f, 0.5f);
+    // Roll轴 PID 参数（角度环）
+    axisRoll.SetAnglePID(7.0f, 0.0f, 0.5f);  
     
     // Pitch轴 PID 参数（虽然不控制电机，但可以设置参数用于记录）
-    axisPitch.SetPIDParams(7.0f, 0.0f, 0.5f);
+    axisPitch.SetAnglePID(7.0f, 0.0f, 0.5f); 
     
     // ========== 初始化使能标志 ==========
     control_enable = 0.0f;
