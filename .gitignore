@@ -1,1 +1,4 @@
-build/
+# 编译输出目录
+**/build/
+**/cmake-build-*/
+

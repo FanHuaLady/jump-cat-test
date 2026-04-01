@@ -6,9 +6,9 @@ extern "C" {
 #endif
 
 // 电机ID定义
-#define MOTOR_X   0     // 水平电机
-#define MOTOR_Y   1     // 竖直电机
-
+#define MOTOR_X      0          // 水平电机
+#define MOTOR_Y      1          // 竖直电机
+#define MOTOR_NONE   0xFF       // 无效电机ID，表示不控制电机
 
 #define MOTOR_DM_X_MasterID     0x11        // CAN_Rx_ID
 #define MOTOR_DM_X_CANID        0x10        // CAN_Tx_ID

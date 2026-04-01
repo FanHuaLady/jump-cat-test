@@ -22,19 +22,33 @@ extern QueueHandle_t xIMUDataQueue;
 extern UART_HandleTypeDef huart7;
 
 // ========== 外部函数声明（从 set_angle_test_task 引入）==========
+
+// 使用VOFA调参的开始
+extern float Get_Control_Enable(void);
+extern void Set_Control_Enable(float enable);
+
+
 extern void Set_Target_Yaw(float yaw_deg);
 extern void Set_Target_Pitch(float pitch_deg);
 extern void Set_Target_Roll(float roll_deg);
 
 // 设置 PID 参数(角度误差转换为目标速度的参数)
-extern void Set_Angle_PID_Kp(float kp);
-extern void Set_Angle_PID_Ki(float ki);
-extern void Set_Angle_PID_Kd(float kd);
+extern void Set_Angle_PID_Kp_X(float kp);
+extern void Set_Angle_PID_Ki_X(float ki);
+extern void Set_Angle_PID_Kd_X(float kd);
+
+extern void Set_Angle_PID_Kp_Y(float kp);
+extern void Set_Angle_PID_Ki_Y(float ki);
+extern void Set_Angle_PID_Kd_Y(float kd);
 
 // vofa查看PID参数(角度误差转换为目标速度的参数)
-extern float Test_Get_PID_Kp(void);
-extern float Test_Get_PID_Ki(void);
-extern float Test_Get_PID_Kd(void);
+extern float Test_Get_PID_Kp_X(void);
+extern float Test_Get_PID_Ki_X(void);
+extern float Test_Get_PID_Kd_X(void);
+
+extern float Test_Get_PID_Kp_Y(void);
+extern float Test_Get_PID_Ki_Y(void);
+extern float Test_Get_PID_Kd_Y(void);
 
 // VOFA显示接口（目标角度）
 extern float Test_Get_Target_Yaw(void);
@@ -57,12 +71,17 @@ static QueueHandle_t xVofaCommandQueue = NULL;
 // 接收变量名列表
 static char Vofa_Variable_List[][VOFA_RX_VARIABLE_ASSIGNMENT_MAX_LENGTH] = 
 {
+    
     {"yaw"},
     {"pitch"},
     {"roll"},
-    {"kp"},
-    {"ki"},
-    {"kd"},
+    {"kp_x"},
+    {"ki_x"},
+    {"kd_x"},
+    {"kp_y"},
+    {"ki_y"},
+    {"kd_y"},
+    {"en"},
 
 };
 
@@ -97,16 +116,24 @@ static void vVofaSendTask(void *pvParameters)
             float error_roll = Test_Get_Error_Roll();
             
             // PID 参数
-            float kp = Test_Get_PID_Kp();
-            float ki = Test_Get_PID_Ki();
-            float kd = Test_Get_PID_Kd();
+            float kp_x = Test_Get_PID_Kp_X();
+            float ki_x = Test_Get_PID_Ki_X();
+            float kd_x = Test_Get_PID_Kd_X();
+
+            float kp_y = Test_Get_PID_Kp_Y();
+            float ki_y = Test_Get_PID_Ki_Y();
+            float kd_y = Test_Get_PID_Kd_Y();
+            
+            float control_enable = Get_Control_Enable();  // 用 float 接收
             
             // 发送JustFloat模式数据
-            Vofa_UART.Set_Data(12, 
+            Vofa_UART.Set_Data(16, 
                                &yaw, &pitch, &roll,
                                &target_yaw, &target_pitch, &target_roll,
                                &error_yaw, &error_pitch, &error_roll,
-                               &kp, &ki, &kd);
+                               &kp_x, &ki_x, &kd_x,
+                               &kp_y, &ki_y, &kd_y,
+                               &control_enable);
             
             Vofa_UART.TIM_1ms_Write_PeriodElapsedCallback();
         }
@@ -133,15 +160,31 @@ static void vVofaCmdTask(void *pvParameters)
             case 2:     // 目标roll角
                 Set_Target_Roll(cmd.value);
                 break;
-            case 3:     // 误差转为目标速度的kp
-                Set_Angle_PID_Kp(cmd.value);
+            case 3:     // 水平电机 误差转为目标速度的kp
+                Set_Angle_PID_Kp_X(cmd.value);
                 break;
-            case 4:     // 误差转为目标速度的ki
-                Set_Angle_PID_Ki(cmd.value);
+            case 4:     // 水平电机 误差转为目标速度的ki
+                Set_Angle_PID_Ki_X(cmd.value);
                 break;
-            case 5:     // 误差转为目标速度的kd
-                Set_Angle_PID_Kd(cmd.value);
+            case 5:     // 水平电机 误差转为目标速度的kd
+                Set_Angle_PID_Kd_X(cmd.value);
                 break;
+            case 6:     // 竖直电机 误差转为目标速度的kp
+                Set_Angle_PID_Kp_Y(cmd.value);
+                break;
+            case 7:     // 竖直电机 误差转为目标速度的ki
+                Set_Angle_PID_Ki_Y(cmd.value);
+                break;
+            case 8:     // 竖直电机 误差转为目标速度的kd
+                Set_Angle_PID_Kd_Y(cmd.value);
+                break;
+
+            case 9:  
+            {   // 使能标志
+                Set_Control_Enable(cmd.value);
+                float value = cmd.value;
+                break; 
+            }
             default:
                 break;
             }
@@ -173,6 +216,8 @@ void Serial_UART_Call_Back(uint8_t *Buffer, uint16_t Length)
 // ========== VOFA任务初始化 ==========
 void Vofa_Task_Create(void)
 {
+    // 等待稳定VOFA发送接收
+    vTaskDelay(pdMS_TO_TICKS(500));
     Vofa_UART.Init(&huart7, 
                    VOFA_RX_VARIABLE_NUM, 
                    (const char **)Vofa_Variable_List, 
