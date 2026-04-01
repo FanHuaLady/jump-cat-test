@@ -65,6 +65,11 @@ extern float Test_Get_Error_Yaw(void);
 extern float Test_Get_Error_Pitch(void);
 extern float Test_Get_Error_Roll(void);
 
+extern float Test_Get_Target_Yaw_RC(void);
+extern float Test_Get_Target_Pitch_RC(void);
+extern float Test_Get_Target_Roll_RC(void);
+
+
 // ========== 静态变量 ==========
 static QueueHandle_t xVofaCommandQueue = NULL;
 
@@ -106,35 +111,44 @@ static void vVofaSendTask(void *pvParameters)
             float roll = imu_data.roll;
             
             // 从 set_angle_test_task 获取数据
-            float target_yaw = Test_Get_Target_Yaw();
-            float target_pitch = Test_Get_Target_Pitch();
-            float target_roll = Test_Get_Target_Roll();
+            // float target_yaw = Test_Get_Target_Yaw();
+            // float target_pitch = Test_Get_Target_Pitch();
+            // float target_roll = Test_Get_Target_Roll();
             
-            // 从 set_angle_test_task 获取角度误差
-            float error_yaw = Test_Get_Error_Yaw();
-            float error_pitch = Test_Get_Error_Pitch();
-            float error_roll = Test_Get_Error_Roll();
+            // // 从 set_angle_test_task 获取角度误差
+            // float error_yaw = Test_Get_Error_Yaw();
+            // float error_pitch = Test_Get_Error_Pitch();
+            // float error_roll = Test_Get_Error_Roll();
             
-            // PID 参数
-            float kp_x = Test_Get_PID_Kp_X();
-            float ki_x = Test_Get_PID_Ki_X();
-            float kd_x = Test_Get_PID_Kd_X();
+            // // PID 参数
+            // float kp_x = Test_Get_PID_Kp_X();
+            // float ki_x = Test_Get_PID_Ki_X();
+            // float kd_x = Test_Get_PID_Kd_X();
 
-            float kp_y = Test_Get_PID_Kp_Y();
-            float ki_y = Test_Get_PID_Ki_Y();
-            float kd_y = Test_Get_PID_Kd_Y();
+            // float kp_y = Test_Get_PID_Kp_Y();
+            // float ki_y = Test_Get_PID_Ki_Y();
+            // float kd_y = Test_Get_PID_Kd_Y();
             
-            float control_enable = Get_Control_Enable();  // 用 float 接收
+            // float control_enable = Get_Control_Enable();  // 用 float 接收
             
-            // 发送JustFloat模式数据
-            Vofa_UART.Set_Data(16, 
+            // // 发送JustFloat模式数据
+            // Vofa_UART.Set_Data(16, 
+            //                    &yaw, &pitch, &roll,
+            //                    &target_yaw, &target_pitch, &target_roll,
+            //                    &error_yaw, &error_pitch, &error_roll,
+            //                    &kp_x, &ki_x, &kd_x,
+            //                    &kp_y, &ki_y, &kd_y,
+            //                    &control_enable);
+
+            float target_yaw = Test_Get_Target_Yaw_RC();
+            float target_pitch = Test_Get_Target_Pitch_RC();
+            float target_roll = Test_Get_Target_Roll_RC();
+            Vofa_UART.Set_Data(6, 
                                &yaw, &pitch, &roll,
-                               &target_yaw, &target_pitch, &target_roll,
-                               &error_yaw, &error_pitch, &error_roll,
-                               &kp_x, &ki_x, &kd_x,
-                               &kp_y, &ki_y, &kd_y,
-                               &control_enable);
-            
+                               &target_yaw, &target_pitch, &target_roll);           
+
+
+
             Vofa_UART.TIM_1ms_Write_PeriodElapsedCallback();
         }
     }

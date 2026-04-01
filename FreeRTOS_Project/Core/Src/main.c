@@ -154,12 +154,13 @@ int main(void)
   SysTimestamp_Init(&htim5);                                      // 初始化时间戳
   HAL_TIM_Base_Start_IT(&htim5);
   WS2812_Task_Create();
-  // Control_Task_Create();
-  MOTOR_DM_Task_Create();
+  Control_Task_Create();
   JY61P_Task_Create();
   Vofa_Task_Create();
-  Set_Angle_Task_Create();
- 
+  MOTOR_DM_Task_Create();
+
+  // Set_Angle_Task_Create();
+  RC_Angle_Speed_Task_Create();
 
     
   init_finished = true;
